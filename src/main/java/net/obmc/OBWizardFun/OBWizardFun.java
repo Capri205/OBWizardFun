@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.Color;
+import org.bukkit.Effect;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -37,7 +38,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	// spell types we support
 	enum EventType {
-		FIRE, EXPLOSION, LIGHTNING, FIREWORK, PEE, DRENCH, FIREBALL
+		FIRE, EXPLOSION, LIGHTNING, FIREWORK, CONE, FROSTLORD, PEE, DRENCH, FIREBALL
 	}
 	// spell randomizer 
 	public static <T extends Enum<EventType>> T randomEnum(Class<T> clazz){
@@ -52,7 +53,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	private boolean doallplayers = false;
 	private boolean domessage = false;
 	private int taskid;
-	private long startdelay = 20L;			// wait 20 seconds before starting spell casting
+	private long startdelay = 20L;			// wait in seconds before starting spell casting
 	private long spellinterval = 30L;		// interval in seconds between random spells
 	
     public void onEnable() {
@@ -73,11 +74,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
         messagemap.put(EventType.FIREWORK, new HashMap<String,String>());
         	messagemap.get(EventType.FIREWORK).put("single", ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
         	messagemap.get(EventType.FIREWORK).put("doall", ChatColor.AQUA + "A wizard just let fireworks under everyone!");
+        messagemap.put(EventType.CONE, new HashMap<String,String>());
+        	messagemap.get(EventType.CONE).put("single", ChatColor.AQUA + "A wizard cast a weird spell on #PLAYER#!");
+        	messagemap.get(EventType.CONE).put("doall", ChatColor.AQUA + "A wizard cast a very weird spell on everyone!");
+        messagemap.put(EventType.FROSTLORD, new HashMap<String,String>());
+        	messagemap.get(EventType.FROSTLORD).put("single", ChatColor.AQUA + "A wizard cast a frost lord spell on #PLAYER#!");
+        	messagemap.get(EventType.FROSTLORD).put("doall", ChatColor.AQUA + "A wizard cast the frost lord spell on everyone!");
         messagemap.put(EventType.PEE, new HashMap<String,String>());
         	messagemap.get(EventType.PEE).put("single", ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
         	messagemap.get(EventType.PEE).put("doall", ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
         messagemap.put(EventType.DRENCH, new HashMap<String,String>());
-        	messagemap.get(EventType.DRENCH).put("single", ChatColor.AQUA + "A wizard just drenched #PLAYER!");
+        	messagemap.get(EventType.DRENCH).put("single", ChatColor.AQUA + "A wizard just drenched #PLAYER#!");
         	messagemap.get(EventType.DRENCH).put("doall", ChatColor.AQUA + "A wizard just drenched everyone!");
         messagemap.put(EventType.FIREBALL, new HashMap<String,String>());
         	messagemap.get(EventType.FIREBALL).put("single", ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
@@ -85,11 +92,15 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
         // setup sounds - some effects have their own sound
         soundmap.put(EventType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
+        soundmap.put(EventType.CONE, Sound.AMBIENT_SOUL_SAND_VALLEY_MOOD);
+        soundmap.put(EventType.FROSTLORD, Sound.AMBIENT_NETHER_WASTES_MOOD);
         soundmap.put(EventType.PEE, Sound.ENTITY_PLAYER_HURT_ON_FIRE);
         soundmap.put(EventType.DRENCH, Sound.ENTITY_PLAYER_SPLASH);
         soundmap.put(EventType.FIREBALL, Sound.ENTITY_ENDER_DRAGON_SHOOT);
         	
         // setup particle map - some effects do not require a particle
+        particlemap.put(EventType.CONE, Particle.ASH);
+        particlemap.put(EventType.FROSTLORD, Particle.REDSTONE);
         particlemap.put(EventType.PEE, Particle.DRIPPING_HONEY);
         particlemap.put(EventType.DRENCH, Particle.WATER_DROP);
 
@@ -140,12 +151,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			// output message
 			if (domessage) {
 				message = doallplayers ? messagemap.get(eventtype).get("doall") : messagemap.get(eventtype).get("single").replace("#PLAYER#", player.getName());
-				player.sendMessage(message);
+				for (Player messageplayer : Bukkit.getOnlinePlayers()) {
+					messageplayer.sendMessage(message);
+				}
 			}
 			
 			// sound effect
 			if (soundmap.containsKey(eventtype)) {
-				player.playSound(player.getLocation(), soundmap.get(eventtype), 1.0f, 1.0f);
+				player.playSound(player.getLocation(), soundmap.get(eventtype), 2.0f, 1.0f);
 			}
 
     		switch(eventtype) {
@@ -160,6 +173,12 @@ public class OBWizardFun extends JavaPlugin implements Listener
     			break;
     		case FIREWORK:
     			doFirework(player);
+    			break;
+    		case CONE:
+    			doConeEffect(player);
+    			break;
+    		case FROSTLORD:
+    			doFrostLordEffect(player);
     			break;
     		case PEE:
     			doPeeEffect(player);
@@ -239,6 +258,58 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
 	}
 	
+	// spiral cone spell
+	void doConeEffect(Player player){
+		Location loc = player.getLocation();
+		new BukkitRunnable(){
+			double phi = 0;
+			public void run(){
+				phi = phi + Math.PI/8;					
+				double x, y, z;			
+ 				for (double t = 0; t <= 2*Math.PI; t = t + Math.PI/16){
+					for (double i = 0; i <= 1; i = i + 1){
+						x = 0.4*(2*Math.PI-t)*0.5*Math.cos(t + phi + i*Math.PI);
+						y = 0.5*t;
+						z = 0.4*(2*Math.PI-t)*0.5*Math.sin(t + phi + i*Math.PI);
+						loc.add(x, y, z);
+						loc.getWorld().spawnParticle(particlemap.get(EventType.CONE), loc, 2);
+						loc.subtract(x,y,z);
+					}
+ 				}		
+ 				if (phi > 10 * Math.PI){						
+					this.cancel();
+				}
+			}	
+		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 3);
+	}
+	
+	// frost lord spell
+	void doFrostLordEffect(Player player) {
+		new BukkitRunnable(){
+			double t = 0;
+			double x, y, z = 0;
+			Particle.DustOptions snow = new Particle.DustOptions(Color.WHITE, 0.5f);
+			public void run() {
+				t +=  Math.PI / 8;
+				Location loc = player.getLocation();
+ 				for (double phi = 0; phi <= 2 * Math.PI; phi += Math.PI / 2) {
+					x = 0.15 * (4 * Math.PI - t) * Math.cos(t + phi);
+					y = 0.2 * t;
+					z = 0.15 * (4 * Math.PI - t) * Math.sin(t + phi);
+					loc.add(x, y, z);
+					loc.getWorld().spawnParticle(particlemap.get(EventType.FROSTLORD), loc, 10, 0.2, 0.0, 0.2, snow);
+					loc.subtract(x,y,z);
+ 				}		
+ 				if (t >= Math.PI * 4) {
+ 					loc.add(x, y, z);
+ 					loc.getWorld().playEffect(loc, Effect.INSTANT_POTION_BREAK, Color.WHITE);
+					this.cancel();
+				}
+
+			}	
+		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
+	}
+	
 	// pee spell
 	void doPeeEffect(Player player) {
 		//TODO: unnecessarily complicated math for this effect - rework as a proper projectile stream (facing direction) or a simple pool like this ultimately does
@@ -246,7 +317,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			double phi = 0;
 			public void run() {
 				phi += Math.PI/5;
-				for (double theta = 0; theta < 2*Math.PI; theta += Math.PI/2.5) {
+				for (double theta = 0; theta < 2 * Math.PI; theta += Math.PI / 2.5) {
 					double r = 1.5;
 					double x = r*Math.cos(theta)*Math.sin(phi);
 					double y = r*Math.cos(phi) + 1.5;
@@ -255,7 +326,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					player.getLocation().getWorld().spawnParticle(particlemap.get(EventType.PEE), player.getLocation(), 1, 0.2, 0, 0.2);
 					player.getLocation().subtract(x, y, z);
 				}
-				if (phi > Math.PI*4) {
+				if (phi > Math.PI * 4) {
 					this.cancel();
 				}
 			}
@@ -267,7 +338,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		int multiplier = rand.nextDouble() <= 0.1 ? 2+rand.nextInt(2) : 1;
 		if (player.getLocation().getY() > 44 && player.getLocation().getY() < 200) {
 			for (int i = 0; i < multiplier; i++ ) {
-				launchFireball(player);
+						launchFireball(player);
 			}
 		}
 	}
