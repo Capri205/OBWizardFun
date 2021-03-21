@@ -37,18 +37,18 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	static java.util.Random rand = new java.util.Random();
 	
 	// spell types we support
-	enum EventType {
-		FIRE, EXPLOSION, LIGHTNING, FIREWORK, CONE, FROSTLORD, PEE, DRENCH, FIREBALL
+	enum SpellType {
+		FIRE, EXPLOSION, LIGHTNING, FIREWORK, WEIRD, FROST, PEE, SOAK, FIREBALL
 	}
 	// spell randomizer 
-	public static <T extends Enum<EventType>> T randomEnum(Class<T> clazz){
+	public static <T extends Enum<SpellType>> T randomEnum(Class<T> clazz){
         int x = rand.nextInt(clazz.getEnumConstants().length);
         return clazz.getEnumConstants()[x];
     }
 	// mappings of messages, sounds and particles to our spells
-	HashMap<EventType, HashMap<String, String>> messagemap = new HashMap<EventType,HashMap<String,String>>();
-	HashMap<EventType, Sound> soundmap = new HashMap<EventType, Sound>();
-	HashMap<EventType, Particle> particlemap = new HashMap<EventType, Particle>();
+	HashMap<SpellType, HashMap<String, String>> messagemap = new HashMap<SpellType,HashMap<String,String>>();
+	HashMap<SpellType, Sound> soundmap = new HashMap<SpellType, Sound>();
+	HashMap<SpellType, Particle> particlemap = new HashMap<SpellType, Particle>();
 	
 	private boolean doallplayers = false;
 	private boolean domessage = false;
@@ -62,47 +62,46 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
     	// setup messages
     	// TODO: move to a config file later
-    	messagemap.put(EventType.FIRE, new HashMap<String,String>());
-    		messagemap.get(EventType.FIRE).put("single", ChatColor.AQUA + "A wizard just set #PLAYER# on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
-    		messagemap.get(EventType.FIRE).put("doall", ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
-       	messagemap.put(EventType.EXPLOSION, new HashMap<String,String>());
-       		messagemap.get(EventType.EXPLOSION).put("single", ChatColor.AQUA + "A wizard just cast an explosion spell on #PLAYER#!");
-       		messagemap.get(EventType.EXPLOSION).put("doall", ChatColor.AQUA + "A wizard just blew everyone up!");
-    	messagemap.put(EventType.LIGHTNING, new HashMap<String,String>());
-        	messagemap.get(EventType.LIGHTNING).put("single", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on #PLAYER#!");
-        	messagemap.get(EventType.LIGHTNING).put("doall", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on everyone!");
-        messagemap.put(EventType.FIREWORK, new HashMap<String,String>());
-        	messagemap.get(EventType.FIREWORK).put("single", ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
-        	messagemap.get(EventType.FIREWORK).put("doall", ChatColor.AQUA + "A wizard just let fireworks under everyone!");
-        messagemap.put(EventType.CONE, new HashMap<String,String>());
-        	messagemap.get(EventType.CONE).put("single", ChatColor.AQUA + "A wizard cast a weird spell on #PLAYER#!");
-        	messagemap.get(EventType.CONE).put("doall", ChatColor.AQUA + "A wizard cast a very weird spell on everyone!");
-        messagemap.put(EventType.FROSTLORD, new HashMap<String,String>());
-        	messagemap.get(EventType.FROSTLORD).put("single", ChatColor.AQUA + "A wizard cast a frost lord spell on #PLAYER#!");
-        	messagemap.get(EventType.FROSTLORD).put("doall", ChatColor.AQUA + "A wizard cast the frost lord spell on everyone!");
-        messagemap.put(EventType.PEE, new HashMap<String,String>());
-        	messagemap.get(EventType.PEE).put("single", ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
-        	messagemap.get(EventType.PEE).put("doall", ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
-        messagemap.put(EventType.DRENCH, new HashMap<String,String>());
-        	messagemap.get(EventType.DRENCH).put("single", ChatColor.AQUA + "A wizard just drenched #PLAYER#!");
-        	messagemap.get(EventType.DRENCH).put("doall", ChatColor.AQUA + "A wizard just drenched everyone!");
-        messagemap.put(EventType.FIREBALL, new HashMap<String,String>());
-        	messagemap.get(EventType.FIREBALL).put("single", ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
-        	messagemap.get(EventType.FIREBALL).put("doall", ChatColor.AQUA + "A wizard launched " + ChatColor.GOLD + "fireballs" + ChatColor.AQUA + " at everyone! Take cover!");        
+    	messagemap.put(SpellType.FIRE, new HashMap<String,String>());
+    		messagemap.get(SpellType.FIRE).put("single", ChatColor.AQUA + "A wizard just set #PLAYER# on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
+    		messagemap.get(SpellType.FIRE).put("doall", ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
+       	messagemap.put(SpellType.EXPLOSION, new HashMap<String,String>());
+       		messagemap.get(SpellType.EXPLOSION).put("single", ChatColor.AQUA + "A wizard just cast an explosion spell on #PLAYER#!");
+       		messagemap.get(SpellType.EXPLOSION).put("doall", ChatColor.AQUA + "A wizard just blew everyone up!");
+    	messagemap.put(SpellType.LIGHTNING, new HashMap<String,String>());
+        	messagemap.get(SpellType.LIGHTNING).put("single", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on #PLAYER#!");
+        	messagemap.get(SpellType.LIGHTNING).put("doall", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on everyone!");
+        messagemap.put(SpellType.FIREWORK, new HashMap<String,String>());
+        	messagemap.get(SpellType.FIREWORK).put("single", ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
+        	messagemap.get(SpellType.FIREWORK).put("doall", ChatColor.AQUA + "A wizard just let fireworks under everyone!");
+        messagemap.put(SpellType.WEIRD, new HashMap<String,String>());
+        	messagemap.get(SpellType.WEIRD).put("single", ChatColor.AQUA + "A wizard cast a very weird spell on #PLAYER#!");
+        	messagemap.get(SpellType.WEIRD).put("doall", ChatColor.AQUA + "A wizard cast a very weird spell on everyone!");
+        messagemap.put(SpellType.FROST, new HashMap<String,String>());
+        	messagemap.get(SpellType.FROST).put("single", ChatColor.AQUA + "A wizard cast some kind of frost spell on #PLAYER#!");
+        	messagemap.get(SpellType.FROST).put("doall", ChatColor.AQUA + "A wizard cast some kind of frost spell on everyone!");
+        messagemap.put(SpellType.PEE, new HashMap<String,String>());
+        	messagemap.get(SpellType.PEE).put("single", ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
+        	messagemap.get(SpellType.PEE).put("doall", ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
+        messagemap.put(SpellType.SOAK, new HashMap<String,String>());
+        	messagemap.get(SpellType.SOAK).put("single", ChatColor.AQUA + "A wizard just soaked #PLAYER#!");
+        	messagemap.get(SpellType.SOAK).put("doall", ChatColor.AQUA + "A wizard just soaked everyone!");
+        messagemap.put(SpellType.FIREBALL, new HashMap<String,String>());
+        	messagemap.get(SpellType.FIREBALL).put("single", ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
+        	messagemap.get(SpellType.FIREBALL).put("doall", ChatColor.AQUA + "A wizard launched " + ChatColor.GOLD + "fireballs" + ChatColor.AQUA + " at everyone! Take cover!");        
 
         // setup sounds - some effects have their own sound
-        soundmap.put(EventType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
-        soundmap.put(EventType.CONE, Sound.AMBIENT_SOUL_SAND_VALLEY_MOOD);
-        soundmap.put(EventType.FROSTLORD, Sound.AMBIENT_NETHER_WASTES_MOOD);
-        soundmap.put(EventType.PEE, Sound.ENTITY_PLAYER_HURT_ON_FIRE);
-        soundmap.put(EventType.DRENCH, Sound.ENTITY_PLAYER_SPLASH);
-        soundmap.put(EventType.FIREBALL, Sound.ENTITY_ENDER_DRAGON_SHOOT);
+        soundmap.put(SpellType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
+        soundmap.put(SpellType.WEIRD, Sound.AMBIENT_CRIMSON_FOREST_MOOD);
+        soundmap.put(SpellType.FROST, Sound.AMBIENT_NETHER_WASTES_MOOD);
+        soundmap.put(SpellType.PEE, Sound.ENTITY_PLAYER_HURT_ON_FIRE);
+        soundmap.put(SpellType.SOAK, Sound.ENTITY_PLAYER_SPLASH);
+        soundmap.put(SpellType.FIREBALL, Sound.ENTITY_ENDER_DRAGON_SHOOT);
         	
         // setup particle map - some effects do not require a particle
-        particlemap.put(EventType.CONE, Particle.ASH);
-        particlemap.put(EventType.FROSTLORD, Particle.REDSTONE);
-        particlemap.put(EventType.PEE, Particle.DRIPPING_HONEY);
-        particlemap.put(EventType.DRENCH, Particle.WATER_DROP);
+        particlemap.put(SpellType.FROST, Particle.REDSTONE);
+        particlemap.put(SpellType.PEE, Particle.DRIPPING_HONEY);
+        particlemap.put(SpellType.SOAK, Particle.WATER_DROP);
 
         // enable the main task
 		BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
@@ -113,14 +112,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
             	int onlineplayercount = Bukkit.getOnlinePlayers().size();
             	if ( onlineplayercount > 0) {
 
-            		// 10% chance event hits all players, 90% of time one random player
+            		// 10% chance spell hits all players, 90% of time one random player
             		doallplayers = rand.nextDouble() < 0.1 && onlineplayercount > 1 ? true : false;
             	
-            		// 20% chance of a message to all players informing of event
+            		// 20% chance of a message to all players informing of spell being cast
             		domessage = rand.nextDouble() < 0.2 ? true : false;
             	
-            		// process random event
-            		castSpell(randomEnum(EventType.class), doallplayers, domessage);
+            		// perform random spell
+            		castSpell(randomEnum(SpellType.class), doallplayers, domessage);
             	}
             } 
         }, startdelay*20, spellinterval*20);
@@ -133,7 +132,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 
 	// cast a random spell
-	void castSpell(EventType eventtype, boolean doallplayers, boolean domessage) {
+	void castSpell(SpellType spelltype, boolean doallplayers, boolean domessage) {
 
 		// get all players or a random player into our list of online players
 		List<Player> allplayers = (List<Player>) Bukkit.getOnlinePlayers();
@@ -150,56 +149,57 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			
 			// output message
 			if (domessage) {
-				message = doallplayers ? messagemap.get(eventtype).get("doall") : messagemap.get(eventtype).get("single").replace("#PLAYER#", player.getName());
+				message = doallplayers ? messagemap.get(spelltype).get("doall") : messagemap.get(spelltype).get("single").replace("#PLAYER#", player.getName());
 				for (Player messageplayer : Bukkit.getOnlinePlayers()) {
 					messageplayer.sendMessage(message);
 				}
 			}
 			
-			// sound effect
-			if (soundmap.containsKey(eventtype)) {
-				player.playSound(player.getLocation(), soundmap.get(eventtype), 2.0f, 1.0f);
+			// spell sound
+			if (soundmap.containsKey(spelltype)) {
+				player.playSound(player.getLocation(), soundmap.get(spelltype), 1.0f, 1.0f);
 			}
 
-    		switch(eventtype) {
+			// play spell
+    		switch(spelltype) {
     		case FIRE:
-    			doFireEffect(player);
+    			castFireSpell(player);
     			break;
     		case EXPLOSION:
-    			doExplosion(player);
+    			castExplosionSpell(player);
     			break;
     		case LIGHTNING:
-    			doLightning(player);
+    			castLightningSpell(player);
     			break;
     		case FIREWORK:
-    			doFirework(player);
+    			castFireworkSpell(player);
     			break;
-    		case CONE:
-    			doConeEffect(player);
+    		case WEIRD:
+    			castWeirdSpell(player);
     			break;
-    		case FROSTLORD:
-    			doFrostLordEffect(player);
+    		case FROST:
+    			castFrostSpell(player);
     			break;
     		case PEE:
-    			doPeeEffect(player);
+    			castPeeSpell(player);
     			break;
-    		case DRENCH:
-    			doDrenchEffect(player);
+    		case SOAK:
+    			castSoakSpell(player);
     			break;
     		case FIREBALL:
-    			doFireballAttack(player);
+    			castFireballSpell(player);
     			break;
     		}
 		}
     }
 	
 	// fire spell
-	void doFireEffect(Player player) {
+	void castFireSpell(Player player) {
 		player.setFireTicks(100);
 	}
 
 	// firework spell
-	void doFirework(Player player) {
+	void castFireworkSpell(Player player) {
 		Location loc = player.getLocation();
 		final Firework f = (Firework)loc.getWorld().spawn(loc, (Class)Firework.class);
 		final FireworkMeta fm = f.getFireworkMeta();
@@ -222,7 +222,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 
 	// explosion spell
-	void doExplosion(Player player) {
+	void castExplosionSpell(Player player) {
 		Location loc = player.getLocation();
 		loc.getWorld().createExplosion(loc.getX(), loc.getY(), loc.getZ(), 20.0F, false, false);
 		// throw player a random direction
@@ -231,12 +231,12 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 
 	// lightning spell
-	void doLightning(Player player ) {
+	void castLightningSpell(Player player ) {
 		player.getWorld().strikeLightningEffect(player.getLocation());
 	}
 
 	// soaking spell
-	void doDrenchEffect(Player player) {
+	void castSoakSpell(Player player) {
 		Location loc = player.getLocation();
 		new BukkitRunnable() {
 			double phi = 0;
@@ -248,7 +248,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					double y = r*Math.cos(phi) + 1.5;
 					double z = r*Math.sin(theta)*Math.sin(phi);
 					loc.add(x, y, z);
-					loc.getWorld().spawnParticle(particlemap.get(EventType.DRENCH), loc, 1);
+					loc.getWorld().spawnParticle(particlemap.get(SpellType.SOAK), loc, 1);
 					loc.subtract(x, y, z);
 				}
 				if (phi > Math.PI*8) {
@@ -258,8 +258,34 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
 	}
 	
-	// spiral cone spell
-	void doConeEffect(Player player){
+	// weird spell - override particle for different behaviours
+	void castWeirdSpell(Player player){
+		double randomnum = rand.nextDouble();
+		Particle randomparticle = null;
+		if (randomnum <= 0.1) {
+			randomparticle = Particle.WARPED_SPORE;
+		} else if (randomnum > 0.1 && randomnum < 0.2) {
+			randomparticle = Particle.CRIMSON_SPORE;
+		} else if (randomnum > 0.2 && randomnum < 0.3) {
+			randomparticle = Particle.LAVA;
+		} else if (randomnum > 0.3 && randomnum < 0.4) {
+			randomparticle = Particle.CAMPFIRE_COSY_SMOKE;
+		} else if (randomnum > 0.4 && randomnum < 0.5) {
+			randomparticle = Particle.REVERSE_PORTAL;
+		} else if (randomnum > 0.5 && randomnum < 0.6) {
+			randomparticle = Particle.NAUTILUS;
+		} else if (randomnum > 0.6 && randomnum < 0.7) {
+			randomparticle = Particle.SOUL;
+		} else if (randomnum > 0.7 && randomnum < 0.8) {
+			randomparticle = Particle.DRAGON_BREATH;
+		} else if (randomnum > 0.8 && randomnum < 0.9) {
+			randomparticle = Particle.COMPOSTER;
+		} else if (randomnum > 0.9 && randomnum <= 1.0) {
+			randomparticle = Particle.DOLPHIN;
+		} else {
+			randomparticle = particlemap.get(SpellType.WEIRD);
+		}
+		final Particle spellparticle = randomparticle;
 		Location loc = player.getLocation();
 		new BukkitRunnable(){
 			double phi = 0;
@@ -272,7 +298,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 						y = 0.5*t;
 						z = 0.4*(2*Math.PI-t)*0.5*Math.sin(t + phi + i*Math.PI);
 						loc.add(x, y, z);
-						loc.getWorld().spawnParticle(particlemap.get(EventType.CONE), loc, 2);
+						loc.getWorld().spawnParticle(spellparticle, loc, 1);
 						loc.subtract(x,y,z);
 					}
  				}		
@@ -283,8 +309,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 3);
 	}
 	
-	// frost lord spell
-	void doFrostLordEffect(Player player) {
+	// frost spell
+	void castFrostSpell(Player player) {
 		new BukkitRunnable(){
 			double t = 0;
 			double x, y, z = 0;
@@ -297,12 +323,13 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					y = 0.2 * t;
 					z = 0.15 * (4 * Math.PI - t) * Math.sin(t + phi);
 					loc.add(x, y, z);
-					loc.getWorld().spawnParticle(particlemap.get(EventType.FROSTLORD), loc, 10, 0.2, 0.0, 0.2, snow);
+					loc.getWorld().spawnParticle(particlemap.get(SpellType.FROST), loc, 10, 0.2, 0.0, 0.2, snow);
 					loc.subtract(x,y,z);
  				}		
  				if (t >= Math.PI * 4) {
  					loc.add(x, y, z);
  					loc.getWorld().playEffect(loc, Effect.INSTANT_POTION_BREAK, Color.WHITE);
+ 					loc.getWorld().playEffect(player.getLocation(), Effect.GHAST_SHRIEK, null);
 					this.cancel();
 				}
 
@@ -311,7 +338,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 	
 	// pee spell
-	void doPeeEffect(Player player) {
+	void castPeeSpell(Player player) {
 		//TODO: unnecessarily complicated math for this effect - rework as a proper projectile stream (facing direction) or a simple pool like this ultimately does
 		new BukkitRunnable() {
 			double phi = 0;
@@ -323,7 +350,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					double y = r*Math.cos(phi) + 1.5;
 					double z = r*Math.sin(theta)*Math.sin(phi);
 					player.getLocation().add(x, y, z);
-					player.getLocation().getWorld().spawnParticle(particlemap.get(EventType.PEE), player.getLocation(), 1, 0.2, 0, 0.2);
+					player.getLocation().getWorld().spawnParticle(particlemap.get(SpellType.PEE), player.getLocation(), 1, 0.2, 0, 0.2);
 					player.getLocation().subtract(x, y, z);
 				}
 				if (phi > Math.PI * 4) {
@@ -334,7 +361,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 	
 	// fireball attack spell
-	void doFireballAttack(Player player) {
+	void castFireballSpell(Player player) {
 		int multiplier = rand.nextDouble() <= 0.1 ? 2+rand.nextInt(2) : 1;
 		if (player.getLocation().getY() > 44 && player.getLocation().getY() < 200) {
 			for (int i = 0; i < multiplier; i++ ) {
