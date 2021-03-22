@@ -2,6 +2,7 @@ package net.obmc.OBWizardFun;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
@@ -11,6 +12,7 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.Color;
 import org.bukkit.Effect;
 import org.bukkit.FireworkEffect;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -134,26 +136,42 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// cast a random spell
 	void castSpell(SpellType spelltype, boolean doallplayers, boolean domessage) {
 
-		// get all players or a random player into our list of online players
-		List<Player> allplayers = (List<Player>) Bukkit.getOnlinePlayers();
-		ArrayList<Player> playerlist = new ArrayList<Player>();
-		if (doallplayers) {
-			playerlist.addAll(allplayers);
-		} else {
-			playerlist.add(allplayers.stream().skip((int) (Bukkit.getOnlinePlayers().size() * Math.random())).findFirst().orElse(null));
-		}
+		// get all online players into a list
+		ArrayList<Player> eligibleplayers = new ArrayList<Player>();
+		eligibleplayers.addAll(Bukkit.getOnlinePlayers());
 
-		// cast spell on players
-		String message = "";
-		for (Player player : playerlist) {
-			
-			// output message
-			if (domessage) {
-				message = doallplayers ? messagemap.get(spelltype).get("doall") : messagemap.get(spelltype).get("single").replace("#PLAYER#", player.getName());
-				for (Player messageplayer : Bukkit.getOnlinePlayers()) {
-					messageplayer.sendMessage(message);
-				}
+		// process any exclusions
+		Iterator<Player> pit = eligibleplayers.iterator();
+		while(pit.hasNext()) {
+			Player player = pit.next();
+			if (player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getLocation().getY() > 200) {
+				pit.remove();
 			}
+		}
+		if (eligibleplayers.size() < 1) {
+			return;			
+		}
+		
+		// do all players or a random player into our list of online players
+		ArrayList<Player> finallist = new ArrayList<Player>();
+		if (!doallplayers && eligibleplayers.size() > 1) {
+			finallist.add(eligibleplayers.stream().skip((int) (eligibleplayers.size() * Math.random())).findFirst().orElse(null));
+		} else {
+			finallist.addAll(eligibleplayers);
+		}
+		eligibleplayers.clear();
+
+		// output message
+		if (domessage) {
+			String message = doallplayers ? messagemap.get(spelltype).get("doall") : messagemap.get(spelltype).get("single").replace("#PLAYER#", finallist.get(0).getName());
+			for (Player messageplayer : Bukkit.getOnlinePlayers()) {
+				messageplayer.sendMessage(message);
+			}
+		}
+		
+		// cast spell on eligible players
+		String message = "";
+		for (Player player : finallist) {
 			
 			// spell sound
 			if (soundmap.containsKey(spelltype)) {
@@ -285,6 +303,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		} else {
 			randomparticle = particlemap.get(SpellType.WEIRD);
 		}
+		log.log(Level.INFO, "debug - particle is " + randomparticle.name());
 		final Particle spellparticle = randomparticle;
 		Location loc = player.getLocation();
 		new BukkitRunnable(){
@@ -363,10 +382,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// fireball attack spell
 	void castFireballSpell(Player player) {
 		int multiplier = rand.nextDouble() <= 0.1 ? 2+rand.nextInt(2) : 1;
-		if (player.getLocation().getY() > 44 && player.getLocation().getY() < 200) {
-			for (int i = 0; i < multiplier; i++ ) {
-						launchFireball(player);
-			}
+		for (int i = 0; i < multiplier; i++ ) {
+					launchFireball(player);
 		}
 	}
 	void launchFireball(Player player) {
