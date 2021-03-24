@@ -1,9 +1,9 @@
 package net.obmc.OBWizardFun;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,6 +31,7 @@ import org.bukkit.util.Vector;
 
 import net.md_5.bungee.api.ChatColor;
 
+
 public class OBWizardFun extends JavaPlugin implements Listener
 {
 	
@@ -40,7 +41,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	// spell types we support
 	enum SpellType {
-		FIRE, EXPLOSION, LIGHTNING, FIREWORK, WEIRD, FROST, PEE, SOAK, FIREBALL
+		FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD, FROST, PEE, GEYSER, FIREBALL
 	}
 	// spell randomizer 
 	public static <T extends Enum<SpellType>> T randomEnum(Class<T> clazz){
@@ -67,15 +68,18 @@ public class OBWizardFun extends JavaPlugin implements Listener
     	messagemap.put(SpellType.FIRE, new HashMap<String,String>());
     		messagemap.get(SpellType.FIRE).put("single", ChatColor.AQUA + "A wizard just set #PLAYER# on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
     		messagemap.get(SpellType.FIRE).put("doall", ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
-       	messagemap.put(SpellType.EXPLOSION, new HashMap<String,String>());
+        messagemap.put(SpellType.FIREWORK, new HashMap<String,String>());
+        	messagemap.get(SpellType.FIREWORK).put("single", ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
+        	messagemap.get(SpellType.FIREWORK).put("doall", ChatColor.AQUA + "A wizard just let fireworks under everyone!");
+  		messagemap.put(SpellType.EXPLOSION, new HashMap<String,String>());
        		messagemap.get(SpellType.EXPLOSION).put("single", ChatColor.AQUA + "A wizard just cast an explosion spell on #PLAYER#!");
        		messagemap.get(SpellType.EXPLOSION).put("doall", ChatColor.AQUA + "A wizard just blew everyone up!");
     	messagemap.put(SpellType.LIGHTNING, new HashMap<String,String>());
         	messagemap.get(SpellType.LIGHTNING).put("single", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on #PLAYER#!");
         	messagemap.get(SpellType.LIGHTNING).put("doall", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on everyone!");
-        messagemap.put(SpellType.FIREWORK, new HashMap<String,String>());
-        	messagemap.get(SpellType.FIREWORK).put("single", ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
-        	messagemap.get(SpellType.FIREWORK).put("doall", ChatColor.AQUA + "A wizard just let fireworks under everyone!");
+        messagemap.put(SpellType.SOAK, new HashMap<String,String>());
+        	messagemap.get(SpellType.SOAK).put("single", ChatColor.AQUA + "A wizard just soaked #PLAYER#!");
+        	messagemap.get(SpellType.SOAK).put("doall", ChatColor.AQUA + "A wizard just soaked everyone!");
         messagemap.put(SpellType.WEIRD, new HashMap<String,String>());
         	messagemap.get(SpellType.WEIRD).put("single", ChatColor.AQUA + "A wizard cast a very weird spell on #PLAYER#!");
         	messagemap.get(SpellType.WEIRD).put("doall", ChatColor.AQUA + "A wizard cast a very weird spell on everyone!");
@@ -85,9 +89,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
         messagemap.put(SpellType.PEE, new HashMap<String,String>());
         	messagemap.get(SpellType.PEE).put("single", ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
         	messagemap.get(SpellType.PEE).put("doall", ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
-        messagemap.put(SpellType.SOAK, new HashMap<String,String>());
-        	messagemap.get(SpellType.SOAK).put("single", ChatColor.AQUA + "A wizard just soaked #PLAYER#!");
-        	messagemap.get(SpellType.SOAK).put("doall", ChatColor.AQUA + "A wizard just soaked everyone!");
+        messagemap.put(SpellType.GEYSER, new HashMap<String,String>());
+        	messagemap.get(SpellType.GEYSER).put("single", ChatColor.AQUA + "A steam jet just formed under " + "#PLAYER#! Run #PLAYER#, Run!");
+        	messagemap.get(SpellType.GEYSER).put("doall", ChatColor.AQUA + "Steam jets just formed under everyone! Run!");
         messagemap.put(SpellType.FIREBALL, new HashMap<String,String>());
         	messagemap.get(SpellType.FIREBALL).put("single", ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
         	messagemap.get(SpellType.FIREBALL).put("doall", ChatColor.AQUA + "A wizard launched " + ChatColor.GOLD + "fireballs" + ChatColor.AQUA + " at everyone! Take cover!");        
@@ -98,13 +102,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
         soundmap.put(SpellType.FROST, Sound.AMBIENT_NETHER_WASTES_MOOD);
         soundmap.put(SpellType.PEE, Sound.ENTITY_PLAYER_HURT_ON_FIRE);
         soundmap.put(SpellType.SOAK, Sound.ENTITY_PLAYER_SPLASH);
+        soundmap.put(SpellType.GEYSER, Sound.BLOCK_BUBBLE_COLUMN_UPWARDS_INSIDE);
         soundmap.put(SpellType.FIREBALL, Sound.ENTITY_ENDER_DRAGON_SHOOT);
         	
         // setup particle map - some effects do not require a particle
+        particlemap.put(SpellType.SOAK, Particle.WATER_DROP);
         particlemap.put(SpellType.FROST, Particle.REDSTONE);
         particlemap.put(SpellType.PEE, Particle.DRIPPING_HONEY);
-        particlemap.put(SpellType.SOAK, Particle.WATER_DROP);
-
+        particlemap.put(SpellType.GEYSER, Particle.CLOUD);
         // enable the main task
 		BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
 		taskid = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
@@ -144,7 +149,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		Iterator<Player> pit = eligibleplayers.iterator();
 		while(pit.hasNext()) {
 			Player player = pit.next();
-			if (player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getLocation().getY() > 200) {
+			if (player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
 				pit.remove();
 			}
 		}
@@ -183,14 +188,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
     		case FIRE:
     			castFireSpell(player);
     			break;
+    		case FIREWORK:
+    			castFireworkSpell(player);
+    			break;
     		case EXPLOSION:
     			castExplosionSpell(player);
     			break;
     		case LIGHTNING:
     			castLightningSpell(player);
     			break;
-    		case FIREWORK:
-    			castFireworkSpell(player);
+    		case SOAK:
+    			castSoakSpell(player);
     			break;
     		case WEIRD:
     			castWeirdSpell(player);
@@ -201,8 +209,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
     		case PEE:
     			castPeeSpell(player);
     			break;
-    		case SOAK:
-    			castSoakSpell(player);
+    		case GEYSER:
+    			castGeyserSpell(player);
     			break;
     		case FIREBALL:
     			castFireballSpell(player);
@@ -379,11 +387,37 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
 	}
 	
+	// geyser spell
+	void castGeyserSpell(Player player) {
+		float effectlife = 5000f;
+		Location baseloc = player.getLocation();
+		new BukkitRunnable() {
+			long startTime = System.currentTimeMillis();
+			long elapsedTime = 0L;
+			float life = (effectlife*0.25f) + rand.nextFloat() + ((effectlife * 0.75f) + (effectlife * 0.25f));
+			float decay = 50f;
+			Location loc = baseloc.clone();
+			Particle.DustOptions steam = new Particle.DustOptions(Color.WHITE, 10);
+			public void run() {
+				loc.getWorld().spawnParticle(Particle.CLOUD, loc, 0, 0, 0.5, 0);
+				life -= decay;
+				if (life <= 0) {
+					loc = baseloc.clone();
+					life = (effectlife*0.25f) + rand.nextFloat() + ((effectlife * 0.75f) + (effectlife * 0.25f));
+				}
+				elapsedTime = (new Date()).getTime() - startTime;
+				if (elapsedTime > effectlife) {
+					this.cancel();
+				}
+			}
+		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
+	}
+	
 	// fireball attack spell
 	void castFireballSpell(Player player) {
 		int multiplier = rand.nextDouble() <= 0.1 ? 2+rand.nextInt(2) : 1;
 		for (int i = 0; i < multiplier; i++ ) {
-					launchFireball(player);
+				launchFireball(player);
 		}
 	}
 	void launchFireball(Player player) {
