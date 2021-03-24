@@ -287,6 +287,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// weird spell - override particle for different behaviours
 	void castWeirdSpell(Player player){
 		double randomnum = rand.nextDouble();
+
 		Particle randomparticle = null;
 		if (randomnum <= 0.1) {
 			randomparticle = Particle.WARPED_SPORE;
@@ -311,7 +312,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		} else {
 			randomparticle = particlemap.get(SpellType.WEIRD);
 		}
-		log.log(Level.INFO, "debug - particle is " + randomparticle.name());
+
 		final Particle spellparticle = randomparticle;
 		Location loc = player.getLocation();
 		new BukkitRunnable(){
