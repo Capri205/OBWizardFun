@@ -2,6 +2,6 @@ website: http://ob-mc.net
 name: OBWizardFun
 author: Fahrenheit451
 version: 1.0
-api-version: 1.15 
+api-version: 1.17
 main: net.obmc.OBWizardFun.OBWizardFun
 description: Pesky wizards casting random spells on players
