@@ -110,6 +110,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
         particlemap.put(SpellType.FROST, Particle.REDSTONE);
         particlemap.put(SpellType.PEE, Particle.DRIPPING_HONEY);
         particlemap.put(SpellType.GEYSER, Particle.CLOUD);
+
         // enable the main task
 		BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
 		taskid = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
@@ -149,7 +150,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		Iterator<Player> pit = eligibleplayers.iterator();
 		while(pit.hasNext()) {
 			Player player = pit.next();
-			if (player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
+			if (player.isDead() || player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
 				pit.remove();
 			}
 		}
