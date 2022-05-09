@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.Color;
 import org.bukkit.Effect;
+import org.bukkit.EntityEffect;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -25,6 +26,7 @@ import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.LargeFireball;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Witch;
 import org.bukkit.Bukkit;
@@ -86,9 +88,10 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	private long startdelay = 20L;				// wait in seconds before starting spell casting
 	private long spellinterval = 30L;			// interval in seconds between random spells
 	private long evilwitchcheckinterval = 5L;		// interval in seconds between checks on evil witches
-	private long angrybeecheckinterval = 5L;		// interval in seconds between checks on angry bees
-	private boolean evilwitchchecking = false;
-	private boolean angrybeechecking = false;
+	private long angrybeecheckinterval = 3L;		// interval in seconds between checks on angry bees
+	private boolean spelltrackerchecking = false;
+	//private boolean evilwitchchecking = false;
+	//private boolean angrybeechecking = false;
 	
     public void onEnable() {
 
@@ -156,126 +159,16 @@ public class OBWizardFun extends JavaPlugin implements Listener
         evilwitchchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		if (evilwitchtracker.size() > 0 ) {
-        			evilwitchchecking = true;
-        			
-        			// check entities vs evil witch tracker
-        			Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
-        			while (eit.hasNext()) {
-        				Entity entity = eit.next();
-        				if (entity.getType().equals(EntityType.WITCH)) {
-        					String entityuuid = entity.getUniqueId().toString();
-        					SpellEntity spellentity = null;
-        					spellentity = evilwitchtracker.get(entityuuid);
-            				if (spellentity != null) {
-        						if (entity.getTicksLived() > spellentity.getLifespan()) {
-        							entity.remove();
-        							evilwitchtracker.remove(entityuuid);
-        						} else {
-       								Witch evilwitch = (Witch) entity;
-       								if (evilwitch.getTarget() == null) {
-       									Player target = Bukkit.getPlayer(UUID.fromString(spellentity.getTargetUUID()));
-       									if (target != null) {
-       										evilwitch.setTarget(target);
-       										evilwitch.attack(target);
-       										target.playSound(target.getLocation(), soundmap.get(OBWizardFun.SpellType.EVILWITCH), 1.0f, 1.0f);
-       									} else {
-       	       								entity.remove();
-       	       								evilwitchtracker.remove(entityuuid);
-       									}
-       								}
-       							}
-        					} else {
-            					entity.remove();
-            				}
-        				}
-        			}
-        			// check evil witch tracker vs entities
-        			ArrayList<String> allwitchuuid = new ArrayList<String>();
-        			Iterator<Entity> eit1 = Bukkit.getWorld("world").getEntities().iterator();
-        			while (eit1.hasNext()) {
-        				Entity entity = eit1.next();
-        				if (entity.getType().equals(EntityType.WITCH)) {
-        					allwitchuuid.add(entity.getUniqueId().toString());
-        				}
-        			}
-        			Iterator<String> ewit = evilwitchtracker.keySet().iterator();
-					while(ewit.hasNext()) {
-						String evilwitchuuid = ewit.next();
-						if (!allwitchuuid.contains(evilwitchuuid)) {
-							ewit.remove();
-	        			}
-					}
-        		}
-        		evilwitchchecking = false;
-
+        		spellEntityChecker(evilwitchtracker);
         	}
         }, startdelay*22, evilwitchcheckinterval*20);
         
         angrybeechecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-				// check entities vs. angry bees
-        		if (angrybeetracker.size() > 0 ) {
-        			angrybeechecking = true;
-        			// check entities vs angry bee tracker
-        			Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
-        			while (eit.hasNext()) {
-        				Entity entity = eit.next();
-        				if (entity.getType().equals(EntityType.BEE)) {
-        					String entityuuid = entity.getUniqueId().toString();
-        					SpellEntity spellentity = null;
-        					spellentity = angrybeetracker.get(entityuuid);
-       						if (spellentity != null) {
-       							if (entity.getTicksLived() > spellentity.getLifespan()) {
-       								entity.remove();
-       								angrybeetracker.remove(entityuuid);
-       							} else {
-       								// re-target bee if it has stung player or isn't targetting
-       								Bee angrybee = (Bee) entity;
-       								if (angrybee.getTarget() == null) {
-       									Player target = Bukkit.getPlayer(UUID.fromString(spellentity.getTargetUUID()));
-       									if (target != null) {
-       										if (target.getLocation().distance(entity.getLocation()) > 7 ) {
-       											angrybee.teleport(target);
-       										}
-       										angrybee.setHasStung(false);
-       										angrybee.setTarget(target);
-       										angrybee.setAnger(500);
-       										angrybee.attack(target);
-       										target.playSound(target.getLocation(), soundmap.get(OBWizardFun.SpellType.ANGRYBEES), 1.0f, 1.0f);
-       									} else {
-       	       								entity.remove();
-       	       								angrybeetracker.remove(entityuuid);
-       									}
-       								}
-       							}
-        					} else {
-        						entity.remove();
-        					}
-        				}
-        			}
-        			// check angry bee tracker vs entities
-        			ArrayList<String> allbeeuuid = new ArrayList<String>();
-        			Iterator<Entity> eit2 = Bukkit.getWorld("world").getEntities().iterator();
-        			while (eit2.hasNext()) {
-        				Entity entity = eit2.next();
-        				if (entity.getType().equals(EntityType.BEE)) {
-        					allbeeuuid.add(entity.getUniqueId().toString());
-        				}
-        			}
-        			Iterator<String> abit = angrybeetracker.keySet().iterator();
-					while(abit.hasNext()) {
-						String angrybeeuuid = abit.next();
-						if (!allbeeuuid.contains(angrybeeuuid)) {
-							abit.remove();
-	        			}
-					}
-          		}
-       			angrybeechecking = false;
-
+        		spellEntityChecker(angrybeetracker);
         	}
-        }, startdelay*22, angrybeecheckinterval*20);
+        }, startdelay*20, angrybeecheckinterval*20);
     
         
         // enable the main task
@@ -326,9 +219,85 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		Bukkit.getLogger().info("[OBFireworksOnJoin] Plugin unloaded");
 	}
 
-	// checker for entity based spells
-	void spellEntityChecker(SpellType type) {
-		
+	// checker for entity based spells - cross check world entities against tracker and
+	// tracker entries against world entities, and re-target entities if necessary
+	void spellEntityChecker(HashMap<String, SpellEntity> spelltracker) {
+		if (spelltracker.size() > 0) {
+			spelltrackerchecking = true;
+			Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
+			while (eit.hasNext()) {
+				Entity entity = eit.next();
+				if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH)) {
+					String entityuuid = entity.getUniqueId().toString();
+					SpellEntity spellentity = null;
+					spellentity = spelltracker.get(entityuuid);
+					if (spellentity != null) {
+						Player target = Bukkit.getPlayer(UUID.fromString(spellentity.getTargetUUID()));
+						if (target == null) {
+							// player no longer in world so despawn entities
+							entity.remove();
+							spelltracker.remove(entityuuid);
+						} else {
+							if (entity.getTicksLived() > spellentity.getLifespan()) {
+								// entity reached end of live so despawn
+								entity.playEffect(EntityEffect.ENTITY_POOF);
+								entity.remove();								
+								spelltracker.remove(entityuuid);
+							} else {
+								Mob mob = (Mob) entity;
+								// move mob to target player if player has moved away
+								if (target.getLocation().distance(entity.getLocation()) > 7) {
+									entity.teleport(target);
+								}
+								if (mob.getTarget() == null) {
+									// re-target mob onto target player
+									switch (entity.getType()) {
+									case BEE:
+										Bee angrybee = (Bee) mob;
+										angrybee.setHasStung(false);
+										angrybee.setTarget(target);
+										angrybee.setAnger(500);
+										angrybee.attack(target);
+										target.playSound(target.getLocation(), soundmap.get(OBWizardFun.SpellType.ANGRYBEES), 1.0f, 1.0f);
+										break;
+									case WITCH:
+										Witch evilwitch = (Witch) mob;
+										evilwitch.setTarget(target);
+										evilwitch.attack(target);
+										target.playSound(target.getLocation(), Sound.ENTITY_WITCH_AMBIENT, 1.0f, 1.0f);
+										break;
+									default:
+										break;
+									}
+								}
+							}
+						}
+					} else {
+						// tracker entry gone so remove entity
+						entity.remove();
+					}
+				}
+			}
+			// cross check tracker gainst world entities
+			ArrayList<String> worldentities = new ArrayList<String>();
+			Iterator<Entity> weit = Bukkit.getWorld("world").getEntities().iterator();
+			while (weit.hasNext()) {
+				Entity entity = weit.next();
+				if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH)) {
+					worldentities.add(entity.getUniqueId().toString());
+				}
+			}
+			Iterator<String> stit = spelltracker.keySet().iterator();
+			while(stit.hasNext()) {
+				String trackeruuid = stit.next();
+				if (!worldentities.contains(trackeruuid)) {
+					// remove tracker entry as world entity has gone
+					stit.remove();
+				}
+			}
+			// check tracker vs world entities
+			spelltrackerchecking = false;
+		}
 	}
 	
 	// cast a random spell
@@ -421,7 +390,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
     }
 	
 	private void spawnAngryBees(Player player) {
-		if (angrybeetracker.size() < 15 && !angrybeechecking) {
+		if (angrybeetracker.size() < 15 && !spelltrackerchecking) {
 			int swarmsize = (int) (Math.random() * (10-5+1)+5);
 			for (int i = 0; i < swarmsize; i++) {
 				Location beespawn = player.getLocation();
@@ -454,7 +423,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	// spawn evil witch if not maxed out
 	private void spawnEvilWitch(Player player) {
-		if (evilwitchtracker.size() < 3 && !evilwitchchecking) {
+		if (evilwitchtracker.size() < 3 && !spelltrackerchecking) {
 			Location loc = player.getLocation();
 			Witch evilwitch = (Witch) player.getWorld().spawnEntity(loc, EntityType.WITCH);
 			evilwitch.setCustomName("Evil Witch " + randomWitchName(WitchName.class));
