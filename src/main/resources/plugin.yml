@@ -5,3 +5,7 @@ version: 1.0
 api-version: 1.18
 main: net.obmc.OBWizardFun.OBWizardFun
 description: Pesky wizards casting random spells on players
+commands:
+  cast:
+    description: Cast a spell on a player.
+    usage: Type /cast <spell> <player>

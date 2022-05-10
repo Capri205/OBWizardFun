@@ -31,6 +31,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Witch;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -44,12 +45,26 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	Logger log = Logger.getLogger("Minecraft");
 
+	public static OBWizardFun instance;
+	
+    public OBWizardFun() {
+    	instance = this;
+    }
+    
+	private static String plugin = "OBWizardFun";
+	private static String pluginprefix = "[" + plugin + "]";
+	private static String chatmsgprefix = ChatColor.AQUA + "" + ChatColor.BOLD + plugin + ChatColor.DARK_GRAY + ChatColor.BOLD + " » " + ChatColor.LIGHT_PURPLE + "";
+	private static String logmsgprefix = pluginprefix + " » ";
+	
+	private EventListener listener;
+	
 	private java.util.Random rand = new java.util.Random();
 
 	// spell types we support
-	private enum SpellType {
+	public static enum SpellType {
 		FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD, FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT, EVILWITCH, ANGRYBEES
 	}
+	
 	// spell randomizer 
 	private <T extends Enum<SpellType>> T randomSpell(Class<T> clazz){
         int x = rand.nextInt(clazz.getEnumConstants().length);
@@ -90,13 +105,13 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	private long evilwitchcheckinterval = 5L;		// interval in seconds between checks on evil witches
 	private long angrybeecheckinterval = 3L;		// interval in seconds between checks on angry bees
 	private boolean spelltrackerchecking = false;
-	//private boolean evilwitchchecking = false;
-	//private boolean angrybeechecking = false;
 	
     public void onEnable() {
 
     	log.log(Level.INFO, "[OBWizardFun] Plugin Version " + this.getDescription().getVersion() + " activated");
 	
+    	registerListeners();
+    	
     	// setup messages
     	// TODO: move to a config file later
     	messagemap.put(SpellType.FIRE, new HashMap<String,String>());
@@ -124,17 +139,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
         	messagemap.get(SpellType.PEE).put("single", ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
         	messagemap.get(SpellType.PEE).put("doall", ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
         messagemap.put(SpellType.GEYSER, new HashMap<String,String>());
-        	messagemap.get(SpellType.GEYSER).put("single", ChatColor.AQUA + "A steam jet just formed under " + "#PLAYER#! Run #PLAYER#, Run!");
-        	messagemap.get(SpellType.GEYSER).put("doall", ChatColor.AQUA + "Steam jets just formed under everyone! Run!");
+        	messagemap.get(SpellType.GEYSER).put("single", ChatColor.AQUA + "A wizard cast a steam jet under " + "#PLAYER#! Run #PLAYER#, Run!");
+        	messagemap.get(SpellType.GEYSER).put("doall", ChatColor.AQUA + "A wizard caused steam jets to form under everyone! Run!");
         messagemap.put(SpellType.FIREBALL, new HashMap<String,String>());
         	messagemap.get(SpellType.FIREBALL).put("single", ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
         	messagemap.get(SpellType.FIREBALL).put("doall", ChatColor.AQUA + "A wizard launched " + ChatColor.GOLD + "fireballs" + ChatColor.AQUA + " at everyone! Take cover!");        
         messagemap.put(SpellType.EVILWITCH, new HashMap<String,String>());
-            messagemap.get(SpellType.EVILWITCH).put("single", ChatColor.AQUA + "An evil witch has appeared! It wants to destroy #PLAYER#!");
-            messagemap.get(SpellType.EVILWITCH).put("doall", ChatColor.AQUA + "An evil witch is out to get everyone!");
+            messagemap.get(SpellType.EVILWITCH).put("single", ChatColor.AQUA + "A wizard sent an evil witch to destroy #PLAYER#!");
+            messagemap.get(SpellType.EVILWITCH).put("doall", ChatColor.AQUA + "Evil witches are out to get everyone!");
         messagemap.put(SpellType.ANGRYBEES, new HashMap<String,String>());
-            messagemap.get(SpellType.ANGRYBEES).put("single", ChatColor.AQUA + "A swarm of angry bees is attacking #PLAYER#!");
-            messagemap.get(SpellType.ANGRYBEES).put("doall", ChatColor.AQUA + "An swarm of angry bees are on the loose! Run!");
+            messagemap.get(SpellType.ANGRYBEES).put("single", ChatColor.AQUA + "A wizard released a swarm of angry bees on #PLAYER#!");
+            messagemap.get(SpellType.ANGRYBEES).put("doall", ChatColor.AQUA + "Swarms of angry bees are on the loose! Run!");
         	
         // setup sounds - some effects have their own sound
         soundmap.put(SpellType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
@@ -205,18 +220,62 @@ public class OBWizardFun extends JavaPlugin implements Listener
             		}
             	
             		// perform random spell
-            		castSpell(spell, doallplayers, domessage);
+            		castSpell(spell, doallplayers, domessage, null, null);
             	}
             } 
         }, startdelay*20, spellinterval*20);
     }
 
+    // register any listeners
+	private void registerListeners() {
+        this.listener = new EventListener();
+        this.getServer().getPluginManager().registerEvents((Listener)this.listener, (Plugin)this);
+        this.getCommand("cast").setExecutor(new CommandListener());
+
+	}
+	
 	@Override
 	public void onDisable() {
 		Bukkit.getScheduler().cancelTask(evilwitchchecker);
 		Bukkit.getScheduler().cancelTask(angrybeechecker);
 		Bukkit.getScheduler().cancelTask(taskid);
 		Bukkit.getLogger().info("[OBFireworksOnJoin] Plugin unloaded");
+	}
+
+	// return this instance
+    public static OBWizardFun getInstance() {
+    	return instance;
+    }	
+	// consistent messaging
+	public static String getPluginName() {
+		return plugin;
+	}
+	public static String getPluginPrefix() {
+		return pluginprefix;
+	}
+	public String getChatMsgPrefix() {
+		return chatmsgprefix;
+	}
+	public String getLogMsgPrefix() {
+		return logmsgprefix;
+	}
+
+	// check a spell is valid
+	public boolean isSpell(String chkspell) {
+		SpellType spell = null;
+		try {
+			spell = SpellType.valueOf(chkspell);
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
+	public SpellType getSpell(String spell) {
+
+		if (isSpell(spell)) {
+			return SpellType.valueOf(spell);
+		}
+		return null;
 	}
 
 	// checker for entity based spells - cross check world entities against tracker and
@@ -258,7 +317,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 										angrybee.setTarget(target);
 										angrybee.setAnger(500);
 										angrybee.attack(target);
-										target.playSound(target.getLocation(), soundmap.get(OBWizardFun.SpellType.ANGRYBEES), 1.0f, 1.0f);
+										target.playSound(target.getLocation(), soundmap.get(SpellType.ANGRYBEES), 1.0f, 1.0f);
 										break;
 									case WITCH:
 										Witch evilwitch = (Witch) mob;
@@ -301,11 +360,18 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 	
 	// cast a random spell
-	void castSpell(SpellType spelltype, boolean doallplayers, boolean domessage) {
+	void castSpell(SpellType spelltype, boolean doallplayers, boolean domessage, Player caster, Player specificplayer) {
 
 		// get all online players into a list
+		boolean docaster = false;
 		ArrayList<Player> eligibleplayers = new ArrayList<Player>();
-		eligibleplayers.addAll(Bukkit.getOnlinePlayers());
+		if (specificplayer != null && caster != null) {
+			eligibleplayers.add(specificplayer);
+			docaster = true;
+			doallplayers = false;
+		} else {
+			eligibleplayers.addAll(Bukkit.getOnlinePlayers());
+		}
 
 		// process any exclusions
 		Iterator<Player> pit = eligibleplayers.iterator();
@@ -331,6 +397,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		// output message
 		if (domessage) {
 			String message = doallplayers ? messagemap.get(spelltype).get("doall") : messagemap.get(spelltype).get("single").replace("#PLAYER#", finallist.get(0).getName());
+			if (docaster) {
+				message = message.replace("A wizard", caster.getName());
+			}
 			for (Player messageplayer : Bukkit.getOnlinePlayers()) {
 				messageplayer.sendMessage(message);
 			}
@@ -389,7 +458,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}
     }
 	
-	private void spawnAngryBees(Player player) {
+	void spawnAngryBees(Player player) {
 		if (angrybeetracker.size() < 15 && !spelltrackerchecking) {
 			int swarmsize = (int) (Math.random() * (10-5+1)+5);
 			for (int i = 0; i < swarmsize; i++) {
@@ -413,7 +482,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 
 	// random sound effect
-	private void playSoundEffect(Player player) {
+	void playSoundEffect(Player player) {
 		Sound randomsound = randomSound(Sound.class);
 		if ( randomsound.toString().startsWith("MUSIC_DISC")) {
 			player.sendMessage(ChatColor.AQUA + "Oh no! A wizard just put on his favioute track! Cover your ears!");
@@ -422,7 +491,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 	
 	// spawn evil witch if not maxed out
-	private void spawnEvilWitch(Player player) {
+	void spawnEvilWitch(Player player) {
 		if (evilwitchtracker.size() < 3 && !spelltrackerchecking) {
 			Location loc = player.getLocation();
 			Witch evilwitch = (Witch) player.getWorld().spawnEntity(loc, EntityType.WITCH);
