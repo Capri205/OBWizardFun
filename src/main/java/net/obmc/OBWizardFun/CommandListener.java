@@ -1,5 +1,6 @@
 package net.obmc.OBWizardFun;
 
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -8,6 +9,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 public class CommandListener implements CommandExecutor {
@@ -33,6 +36,52 @@ public class CommandListener implements CommandExecutor {
 
 		// process the command and any arguments
 		if (command.getName().equalsIgnoreCase("cast")) {
+			//TODO: remove when testing done
+			if (args[0].equals("show")) {
+				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
+				while (eit.hasNext()) {
+					Entity entity = eit.next();
+					log.log(Level.INFO, "debug - " + entity.getType().toString() +", " + entity.getCustomName() + ", " + entity.getLocation().getX() + ", " + entity.getLocation().getY() + ", " + entity.getLocation().getZ());
+				}
+				return true;
+			}
+			//TODO: remove when testing done
+			if (args[0].equals("killall")) {
+				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
+				int killed = 0;
+				while (eit.hasNext()) {
+					Entity entity = eit.next();
+					if (entity.getType().equals(EntityType.valueOf(args[1].toUpperCase()))) {
+						entity.remove();
+						killed++;
+					}
+				}
+				return true;
+			}
+			//TODO: remove when testing done
+			if (args[0].equals("killnamed")) {
+				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
+				int killed = 0;
+				while (eit.hasNext()) {
+					Entity entity = eit.next();
+					String entityname = "";
+					try {
+						entityname = entity.getCustomName();
+						entityname = ChatColor.stripColor(entityname);
+						String mobname = args[1];
+						for (int i = 2; i<args.length; i++) {
+							mobname = mobname + " " + args[i];
+						}
+						if (entityname.contains(mobname)) {
+							entity.remove();
+							killed++;
+						}
+					} catch (Exception e) {
+					}
+				}
+				return true;
+			}
+
 			if (args.length < 2) {
 				Usage(sender);
 				return true;

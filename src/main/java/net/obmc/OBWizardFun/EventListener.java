@@ -3,6 +3,7 @@ package net.obmc.OBWizardFun;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -12,6 +13,10 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.potion.PotionEffectType;
+
+import net.md_5.bungee.api.ChatColor;
 
 
 public class EventListener implements Listener
@@ -29,8 +34,18 @@ public class EventListener implements Listener
 	
 	@EventHandler
 	public void targetEvent( EntityTargetEvent event ) {
-		String entityuuid = event.getEntity().getUniqueId().toString();
+		Entity entity = event.getEntity();
+		String entityuuid = entity.getUniqueId().toString();
 		String targetuuid = "notarget";
+		String entityname = "";
+		if (entity.getCustomName() != null ) {
+			entityname = ChatColor.stripColor(entity.getCustomName());
+		}
+		if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH)) {
+			if ( !entityname.contains("Evil Witch") && !entityname.contains("Angry Bee")) {
+				event.setCancelled(true);
+			}
+		}
 		if ( event.getTarget() != null ) {
 			targetuuid = event.getTarget().getUniqueId().toString();
 		}
@@ -55,9 +70,19 @@ public class EventListener implements Listener
 		}
 		if (event.getCause().equals(DamageCause.POISON)) {
 			event.setDamage(0.03);
-		}
-		if (event.getCause().equals(DamageCause.FLY_INTO_WALL)) {
+		} else if (event.getCause().equals(DamageCause.FLY_INTO_WALL) || event.getCause().equals(DamageCause.ENTITY_EXPLOSION)) {
 			event.setCancelled(true);
 		}
+	}
+	
+	@EventHandler
+	public void onPlayerJoin(PlayerJoinEvent event) {
+		// remove lingering effects and fill health and hunger bars when player joins
+		Player player = event.getPlayer();
+		if (player.hasPotionEffect(PotionEffectType.POISON)) {
+			player.removePotionEffect(PotionEffectType.POISON);
+		}
+		player.setHealth(20.0);
+		player.setFoodLevel(20);
 	}
 }

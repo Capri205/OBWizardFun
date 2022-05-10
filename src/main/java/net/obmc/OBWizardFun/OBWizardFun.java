@@ -174,14 +174,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
         evilwitchchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(evilwitchtracker);
+        		spellEntityChecker(evilwitchtracker, EntityType.WITCH, "Evil Witch");
         	}
         }, startdelay*22, evilwitchcheckinterval*20);
         
         angrybeechecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(angrybeetracker);
+        		spellEntityChecker(angrybeetracker, EntityType.BEE, "Angry Bee");
         	}
         }, startdelay*20, angrybeecheckinterval*20);
     
@@ -197,12 +197,6 @@ public class OBWizardFun extends JavaPlugin implements Listener
             		// choose random spell
             		SpellType spell = randomSpell(SpellType.class);
             		
-            		// dont run some spells whilst others are in progress
-            		if ( (spell.equals(SpellType.ANGRYBEES) && angrybeetracker.size() > 0) ||
-            			 (spell.equals(SpellType.EVILWITCH) && evilwitchtracker.size() > 0)) {
-            			return;
-            		}
-            		
             		// 10% chance spell hits all players, 90% of time one random player
            			doallplayers = rand.nextDouble() < 0.1 && onlineplayercount > 1 ? true : false;
             	
@@ -210,14 +204,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
            			domessage = rand.nextDouble() < 0.2 ? true : false;
 
             		// some overrides
-            		if (spell.equals(SpellType.SOUNDEFFECT)) {
-            			doallplayers = false;
-            			domessage = false;            			
-            		}
-            		if (spell.equals(SpellType.EVILWITCH) || spell.equals(SpellType.ANGRYBEES)) {
-            			doallplayers = false;
-            			domessage = true;
-            		}
+//            		if (spell.equals(SpellType.SOUNDEFFECT)) {
+//            			doallplayers = false;
+//            			domessage = false;            			
+//            		}
+//            		if (spell.equals(SpellType.EVILWITCH) || spell.equals(SpellType.ANGRYBEES)) {
+//            			doallplayers = false;
+//            			domessage = true;
+//            		}
             	
             		// perform random spell
             		castSpell(spell, doallplayers, domessage, null, null);
@@ -280,20 +274,27 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// checker for entity based spells - cross check world entities against tracker and
 	// tracker entries against world entities, and re-target entities if necessary
-	void spellEntityChecker(HashMap<String, SpellEntity> spelltracker) {
+	void spellEntityChecker(HashMap<String, SpellEntity> spelltracker, EntityType type, String mobname) {
 		if (spelltracker.size() > 0) {
 			spelltrackerchecking = true;
 			Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
 			while (eit.hasNext()) {
 				Entity entity = eit.next();
-				if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH)) {
+				String entityname = "";
+				if ( entity.getCustomName() != null) {
+					entityname = ChatColor.stripColor(entity.getCustomName());
+				}
+				if (entity.getType().equals(type) && entityname.contains(mobname)) {
 					String entityuuid = entity.getUniqueId().toString();
 					SpellEntity spellentity = null;
 					spellentity = spelltracker.get(entityuuid);
 					if (spellentity != null) {
 						Player target = Bukkit.getPlayer(UUID.fromString(spellentity.getTargetUUID()));
-						if (target == null) {
+						if (target == null || target.isDead() || target.isInWater() ||
+								target.getGameMode().equals(GameMode.CREATIVE) || target.getGameMode().equals(GameMode.SPECTATOR) ||
+								target.getLocation().getY() > 200) {
 							// player no longer in world so despawn entities
+							entity.playEffect(EntityEffect.ENTITY_POOF);
 							entity.remove();
 							spelltracker.remove(entityuuid);
 						} else {
@@ -305,12 +306,21 @@ public class OBWizardFun extends JavaPlugin implements Listener
 							} else {
 								Mob mob = (Mob) entity;
 								// move mob to target player if player has moved away
-								if (target.getLocation().distance(entity.getLocation()) > 7) {
+								int distance = 7;
+								switch (entity.getType()) {
+								case WITCH:
+									distance = 15;
+									break;
+								default:
+									distance = 7;
+									break;
+								}
+								if (target.getLocation().distance(entity.getLocation()) > distance) {
 									entity.teleport(target);
 								}
 								if (mob.getTarget() == null) {
 									// re-target mob onto target player
-									switch (entity.getType()) {
+									switch (type) {
 									case BEE:
 										Bee angrybee = (Bee) mob;
 										angrybee.setHasStung(false);
@@ -342,7 +352,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			Iterator<Entity> weit = Bukkit.getWorld("world").getEntities().iterator();
 			while (weit.hasNext()) {
 				Entity entity = weit.next();
-				if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH)) {
+				if (entity.getType().equals(type)) {
 					worldentities.add(entity.getUniqueId().toString());
 				}
 			}
@@ -378,6 +388,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		while(pit.hasNext()) {
 			Player player = pit.next();
 			if (player.isDead() || player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
+				if (docaster) {
+					caster.sendMessage(chatmsgprefix + ChatColor.RED + "Cannot cast a spell on " + ChatColor.WHITE + player.getName() + ChatColor.RED + " right now");
+				}
 				pit.remove();
 			}
 		}
@@ -395,7 +408,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		eligibleplayers.clear();
 
 		// output message
-		if (domessage) {
+		if (domessage && !spelltype.equals(SpellType.SOUNDEFFECT)) {
 			String message = doallplayers ? messagemap.get(spelltype).get("doall") : messagemap.get(spelltype).get("single").replace("#PLAYER#", finallist.get(0).getName());
 			if (docaster) {
 				message = message.replace("A wizard", caster.getName());
