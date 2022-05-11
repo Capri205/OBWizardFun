@@ -358,6 +358,31 @@ public class OBWizardFun extends JavaPlugin implements Listener
 									default:
 										break;
 									}
+								} else {
+									// no need to re target, but do something anyway - play sounds perhpas?
+									switch (type) {
+									case BEE:
+										double buzzer = rand.nextDouble();
+										if (buzzer < 0.3) {
+											target.playSound(target.getLocation(), Sound.ENTITY_BEE_LOOP, 1.0f, 1.0f);
+										} else if (buzzer < 0.6) {
+											target.playSound(target.getLocation(), Sound.ENTITY_BEE_LOOP_AGGRESSIVE, 1.0f, 1.0f);
+										} else {
+											target.playSound(target.getLocation(), Sound.ENTITY_BEE_STING, 1.0f, 1.0f);
+										}
+										target.playSound(target.getLocation(), soundmap.get(SpellType.ANGRYBEES), 1.0f, 1.0f);
+										break;
+									case WOLF:
+										double growlorhowl = rand.nextDouble();
+										if (growlorhowl < 0.5) {
+											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_GROWL, 1.0f, 1.0f);
+										} else {
+											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_HOWL, 1.0f, 1.0f);
+										}
+										break;
+									default:
+										break;
+									}
 								}
 							}
 						}

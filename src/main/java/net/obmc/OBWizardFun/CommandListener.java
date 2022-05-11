@@ -64,7 +64,12 @@ public class CommandListener implements CommandExecutor {
 				int killed = 0;
 				while (eit.hasNext()) {
 					Entity entity = eit.next();
-					if (entity.getType().equals(EntityType.valueOf(args[1].toUpperCase()))) {
+					String entityname = null;
+					try {
+						entityname = entity.getCustomName();
+					} catch (NullPointerException e) {
+					}
+					if (entity.getType().equals(EntityType.valueOf(args[1].toUpperCase())) && entityname == null) {
 						entity.remove();
 						killed++;
 					}
