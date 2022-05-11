@@ -41,8 +41,8 @@ public class EventListener implements Listener
 		if (entity.getCustomName() != null ) {
 			entityname = ChatColor.stripColor(entity.getCustomName());
 		}
-		if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH)) {
-			if ( !entityname.contains("Evil Witch") && !entityname.contains("Angry Bee")) {
+		if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH) || entity.getType().equals(EntityType.WOLF)) {
+			if ( !entityname.contains("Evil Witch") && !entityname.contains("Angry Bee") || entityname.contains("Rabid Wolf")) {
 				event.setCancelled(true);
 			}
 		}
@@ -53,7 +53,7 @@ public class EventListener implements Listener
 	
 	@EventHandler
 	public void damageEvent(EntityDamageByEntityEvent event) {
-		if (event.getDamager().getType().equals(EntityType.BEE) || event.getDamager().getType().equals(EntityType.SPLASH_POTION)) {
+		if (event.getDamager().getType().equals(EntityType.BEE) || event.getDamager().getType().equals(EntityType.WOLF) || event.getDamager().getType().equals(EntityType.SPLASH_POTION)) {
 			event.setDamage(0.01);
 		} else if (event.getDamager().getType().equals(EntityType.AREA_EFFECT_CLOUD)) {
 			event.setDamage(0.05);

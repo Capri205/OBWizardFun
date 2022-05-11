@@ -45,6 +45,19 @@ public class CommandListener implements CommandExecutor {
 				}
 				return true;
 			}
+			
+			//TODO: remove when testing done
+			if (args[0].equals("spawn")) {
+				Player player = (Player) sender;
+				try {
+					player.getWorld().spawnEntity(player.getLocation(), EntityType.valueOf(args[1]));
+					log.log(Level.INFO, "debug - spawned a " + args[1] + " at " + player.getName() + "'s location");
+				} catch (Exception e) {
+					log.log(Level.INFO, "debug - failed to spawn a " + args[1] + " at " + player.getName() + "'s location");
+				}
+				return true;
+			}
+			
 			//TODO: remove when testing done
 			if (args[0].equals("killall")) {
 				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
@@ -56,8 +69,10 @@ public class CommandListener implements CommandExecutor {
 						killed++;
 					}
 				}
+				log.log(Level.INFO, "debug - removed " + killed + " entities");
 				return true;
 			}
+
 			//TODO: remove when testing done
 			if (args[0].equals("killnamed")) {
 				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
@@ -79,6 +94,7 @@ public class CommandListener implements CommandExecutor {
 					} catch (Exception e) {
 					}
 				}
+				log.log(Level.INFO, "debug - removed " + killed + " entities");
 				return true;
 			}
 
@@ -88,8 +104,10 @@ public class CommandListener implements CommandExecutor {
 			}
 			if (!OBWizardFun.getInstance().isSpell(args[0].toUpperCase())) {
 				sender.sendMessage(chatmsgprefix + ChatColor.RED + "Invalid spell provided");
-				sender.sendMessage(chatmsgprefix + "Valid spells are: FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD,");
-				sender.sendMessage(chatmsgprefix + "    FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT, EVILWITCH, ANGRYBEES");
+				sender.sendMessage(chatmsgprefix + "Valid spells are:");
+				sender.sendMessage(chatmsgprefix + "    FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD,");
+				sender.sendMessage(chatmsgprefix + "    FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT,");
+				sender.sendMessage(chatmsgprefix + "    EVILWITCH, ANGRYBEES, RABIDWOLVES");
 				return true;
 			}
 			boolean playeronline = false;

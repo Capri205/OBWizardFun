@@ -29,6 +29,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Witch;
+import org.bukkit.entity.Wolf;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
@@ -62,7 +63,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// spell types we support
 	public static enum SpellType {
-		FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD, FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT, EVILWITCH, ANGRYBEES
+		FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD, FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT, EVILWITCH, ANGRYBEES, RABIDWOLVES
 	}
 	
 	// spell randomizer 
@@ -89,6 +90,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// entity trackers
 	private HashMap<String, SpellEntity> evilwitchtracker = new HashMap<String, SpellEntity>();
 	private HashMap<String, SpellEntity> angrybeetracker = new HashMap<String, SpellEntity>();
+	private HashMap<String, SpellEntity> rabidwolftracker = new HashMap<String, SpellEntity>();
 	
 	// mappings of messages, sounds and particles to our spells
 	private HashMap<SpellType, HashMap<String, String>> messagemap = new HashMap<SpellType,HashMap<String,String>>();
@@ -100,10 +102,12 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	private int taskid;
 	private int evilwitchchecker;
 	private int angrybeechecker;
+	private int rabidwolfchecker;
 	private long startdelay = 20L;				// wait in seconds before starting spell casting
 	private long spellinterval = 30L;			// interval in seconds between random spells
 	private long evilwitchcheckinterval = 5L;		// interval in seconds between checks on evil witches
 	private long angrybeecheckinterval = 3L;		// interval in seconds between checks on angry bees
+	private long rabidwolfcheckinterval = 5L;		// interval in seconds between checks on angry bees
 	private boolean spelltrackerchecking = false;
 	
     public void onEnable() {
@@ -150,6 +154,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
         messagemap.put(SpellType.ANGRYBEES, new HashMap<String,String>());
             messagemap.get(SpellType.ANGRYBEES).put("single", ChatColor.AQUA + "A wizard released a swarm of angry bees on #PLAYER#!");
             messagemap.get(SpellType.ANGRYBEES).put("doall", ChatColor.AQUA + "Swarms of angry bees are on the loose! Run!");
+        messagemap.put(SpellType.RABIDWOLVES, new HashMap<String,String>());
+            messagemap.get(SpellType.RABIDWOLVES).put("single", ChatColor.AQUA + "A wizard released a pack of rabid wolves on #PLAYER#!");
+            messagemap.get(SpellType.RABIDWOLVES).put("doall", ChatColor.AQUA + "A pack of rabid wolves are on the loose! Run!");
         	
         // setup sounds - some effects have their own sound
         soundmap.put(SpellType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
@@ -161,6 +168,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
         soundmap.put(SpellType.FIREBALL, Sound.ENTITY_ENDER_DRAGON_SHOOT);
         soundmap.put(SpellType.EVILWITCH, Sound.ENTITY_WITCH_CELEBRATE);
         soundmap.put(SpellType.ANGRYBEES, Sound.ENTITY_BEE_LOOP_AGGRESSIVE);
+        soundmap.put(SpellType.RABIDWOLVES, Sound.ENTITY_WOLF_HOWL);
         	
         // setup particle map - some effects do not require a particle
         particlemap.put(SpellType.SOAK, Particle.WATER_DROP);
@@ -184,6 +192,13 @@ public class OBWizardFun extends JavaPlugin implements Listener
         		spellEntityChecker(angrybeetracker, EntityType.BEE, "Angry Bee");
         	}
         }, startdelay*20, angrybeecheckinterval*20);
+
+        rabidwolfchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        	@Override
+        	public void run() {
+        		spellEntityChecker(rabidwolftracker, EntityType.WOLF, "Rabid Wolf");
+        	}
+        }, startdelay*20, rabidwolfcheckinterval*20);
     
         
         // enable the main task
@@ -202,16 +217,6 @@ public class OBWizardFun extends JavaPlugin implements Listener
             	
             		// 20% chance of a message to all players informing of spell being cast
            			domessage = rand.nextDouble() < 0.2 ? true : false;
-
-            		// some overrides
-//            		if (spell.equals(SpellType.SOUNDEFFECT)) {
-//            			doallplayers = false;
-//            			domessage = false;            			
-//            		}
-//            		if (spell.equals(SpellType.EVILWITCH) || spell.equals(SpellType.ANGRYBEES)) {
-//            			doallplayers = false;
-//            			domessage = true;
-//            		}
             	
             		// perform random spell
             		castSpell(spell, doallplayers, domessage, null, null);
@@ -232,6 +237,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	public void onDisable() {
 		Bukkit.getScheduler().cancelTask(evilwitchchecker);
 		Bukkit.getScheduler().cancelTask(angrybeechecker);
+		Bukkit.getScheduler().cancelTask(rabidwolfchecker);
 		Bukkit.getScheduler().cancelTask(taskid);
 		Bukkit.getLogger().info("[OBFireworksOnJoin] Plugin unloaded");
 	}
@@ -309,6 +315,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
 								int distance = 7;
 								switch (entity.getType()) {
 								case WITCH:
+									distance = 10;
+									break;
+								case WOLF:
 									distance = 15;
 									break;
 								default:
@@ -334,6 +343,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
 										evilwitch.setTarget(target);
 										evilwitch.attack(target);
 										target.playSound(target.getLocation(), Sound.ENTITY_WITCH_AMBIENT, 1.0f, 1.0f);
+										break;
+									case WOLF:
+										Wolf rabidwolf = (Wolf) mob;
+										rabidwolf.setTarget(target);
+										rabidwolf.attack(target);
+										double growlorhowl = rand.nextDouble();
+										if (growlorhowl < 0.5) {
+											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_GROWL, 1.0f, 1.0f);
+										} else {
+											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_HOWL, 1.0f, 1.0f);
+										}
 										break;
 									default:
 										break;
@@ -467,18 +487,41 @@ public class OBWizardFun extends JavaPlugin implements Listener
     		case ANGRYBEES:
     			spawnAngryBees(player);
     			break;
+    		case RABIDWOLVES:
+    			spawnRabidWolves(player);
+    			break;
     		}
 		}
     }
 	
+	// pack of rabid wolves
+	void spawnRabidWolves(Player player) {
+		if (rabidwolftracker.size() < 15 && !spelltrackerchecking) {
+			int packsize = (int) (Math.random() * ((5-3)+1)+3);
+			for (int i = 0; i < packsize; i++) {
+				Location wolfspawn = player.getLocation();
+				LivingEntity rabidwolfbase = (LivingEntity) player.getWorld().spawnEntity(wolfspawn, EntityType.WOLF);
+				Wolf rabidwolf = (Wolf) rabidwolfbase;
+				rabidwolf.setCustomName(ChatColor.DARK_RED + "" + ChatColor.BOLD + "Rabid" + ChatColor.RESET + " " + ChatColor.WHITE + "Wolf");
+				rabidwolf.setTarget(player);
+				rabidwolf.attack(player);
+				rabidwolftracker.put(rabidwolf.getUniqueId().toString(),
+					new SpellEntity(rabidwolf.getCustomName(),
+							rabidwolf.getUniqueId().toString(),
+							player.getUniqueId().toString(),
+					(int) (Math.random() * (30 - 15 + 1 ) + 15)*20)
+				);
+			}
+		}
+	}
+
+	// swarm of angry bees
 	void spawnAngryBees(Player player) {
 		if (angrybeetracker.size() < 15 && !spelltrackerchecking) {
 			int swarmsize = (int) (Math.random() * (10-5+1)+5);
 			for (int i = 0; i < swarmsize; i++) {
 				Location beespawn = player.getLocation();
 				LivingEntity angrybeebase = (LivingEntity) player.getWorld().spawnEntity(beespawn, EntityType.BEE);
-				//angrybeebase.getAttribute(Attribute.GENERIC_FLYING_SPEED).setBaseValue(0.9);	// 0.6 base
-				//angrybeebase.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.7);	// 0.3 base
 				Bee angrybee = (Bee) angrybeebase;
 				angrybee.setCustomName(ChatColor.RED + "Angry" + " " + ChatColor.GOLD + "Bee");
 				angrybee.setAnger(500);
