@@ -16,8 +16,11 @@ import org.bukkit.EntityEffect;
 import org.bukkit.FireworkEffect;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.DragonFireball;
 import org.bukkit.entity.Entity;
@@ -414,6 +417,42 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}
 	}
 	
+	// return a random location around a player within a range
+	Location getRandomLocation(Location loc, int rangelow, int rangehigh) {
+		boolean goodspot = false;
+		int tries = 0;
+		while (!goodspot && tries < 5) {
+			Material[] blockmatch = new Material[3];
+			int offsetx = 0;
+			int offsetz = 0;
+			while (offsetx == 0 && offsetz == 0) {
+				offsetx = (int) (Math.random() * ((rangehigh-rangelow)+1)+rangelow);
+				offsetx = (int) (rand.nextDouble() < 0.5 ? offsetx-(offsetx*2) : offsetx);
+				offsetz = (int) (Math.random() * ((rangehigh-rangelow)+1)+rangelow);
+				offsetz = (int) (rand.nextDouble() < 0.5 ? offsetz-(offsetz*2) : offsetz);
+			}
+
+			Location tryspot = loc.clone();	tryspot.add(offsetx, 0, offsetz); tryspot.setY(tryspot.getWorld().getHighestBlockAt(tryspot).getY()+1); Block blockatspot = tryspot.getBlock(); 
+			Location underspot = tryspot.clone(); underspot.add(0, -1, 0); Block blockunderspot = underspot.getBlock();
+			Location overspot = tryspot.clone(); overspot.add(0, 1, 0);  Block blockoverspot = overspot.getBlock();
+			blockmatch[1] = blockatspot.getType(); blockmatch[0] = blockunderspot.getType(); blockmatch[2] = blockoverspot.getType();
+			if (loc.distance(tryspot) < 10 ) {
+				boolean blocksetmatch = blockmatch[0] != Material.AIR && blockmatch[0] != Material.WATER && blockmatch[0] != Material.LAVA && blockmatch[1] == Material.AIR && blockmatch[2] == Material.AIR;
+				while (!blocksetmatch && loc.distance(tryspot) < 10) {
+					tryspot.add(0, 1, 0); blockatspot = tryspot.getBlock(); blockmatch[1] = blockatspot.getType();
+					underspot.add(0, 1, 0); blockunderspot = underspot.getBlock(); blockmatch[0] = blockunderspot.getType();
+					overspot.add(0, 1, 0);  blockoverspot = overspot.getBlock(); blockmatch[2] = blockoverspot.getType();
+					blocksetmatch = blockmatch[0] != Material.AIR && blockmatch[0] != Material.WATER && blockmatch[0] != Material.LAVA && blockmatch[1] == Material.AIR && blockmatch[2] == Material.AIR;
+				}
+				if (blocksetmatch) {
+					return tryspot;
+				}
+			}
+			tries++;
+		}
+		return loc;
+	}
+	
 	// cast a random spell
 	void castSpell(SpellType spelltype, boolean doallplayers, boolean domessage, Player caster, Player specificplayer) {
 
@@ -516,7 +555,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
     			spawnRabidWolves(player);
     			break;
     		}
-		}
+    	}
     }
 	
 	// pack of rabid wolves
@@ -524,7 +563,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		if (rabidwolftracker.size() < 15 && !spelltrackerchecking) {
 			int packsize = (int) (Math.random() * ((5-3)+1)+3);
 			for (int i = 0; i < packsize; i++) {
-				Location wolfspawn = player.getLocation();
+				Location wolfspawn = getRandomLocation(player.getLocation(), 3, 8);
 				LivingEntity rabidwolfbase = (LivingEntity) player.getWorld().spawnEntity(wolfspawn, EntityType.WOLF);
 				Wolf rabidwolf = (Wolf) rabidwolfbase;
 				rabidwolf.setCustomName(ChatColor.DARK_RED + "" + ChatColor.BOLD + "Rabid" + ChatColor.RESET + " " + ChatColor.WHITE + "Wolf");
@@ -545,7 +584,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		if (angrybeetracker.size() < 15 && !spelltrackerchecking) {
 			int swarmsize = (int) (Math.random() * (10-5+1)+5);
 			for (int i = 0; i < swarmsize; i++) {
-				Location beespawn = player.getLocation();
+				Location beespawn = getRandomLocation(player.getLocation(), 2, 5);
 				LivingEntity angrybeebase = (LivingEntity) player.getWorld().spawnEntity(beespawn, EntityType.BEE);
 				Bee angrybee = (Bee) angrybeebase;
 				angrybee.setCustomName(ChatColor.RED + "Angry" + " " + ChatColor.GOLD + "Bee");
@@ -574,7 +613,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// spawn evil witch if not maxed out
 	void spawnEvilWitch(Player player) {
 		if (evilwitchtracker.size() < 3 && !spelltrackerchecking) {
-			Location loc = player.getLocation();
+			Location loc = getRandomLocation(player.getLocation(), 5, 10);
 			Witch evilwitch = (Witch) player.getWorld().spawnEntity(loc, EntityType.WITCH);
 			evilwitch.setCustomName("Evil Witch " + randomWitchName(WitchName.class));
 			evilwitch.setCustomNameVisible(true);
