@@ -4,7 +4,8 @@ Minecraft bukkit/spigot plugin for our wizard themed lobby whereby imaginary wiz
 
 No commands. Just put it into the plugins folder and enjoy.
 
-Spells can be cast on a specific randomly chosen player or all players.
+Spells can be cast on a specific randomly chosen player or all players.<br>
+Players can also cast spells on themselves or others using the /cast command!
 
 FIRE - Sets you on fire<br>
 FIREWORK - Launches a firework under you<br>
@@ -23,5 +24,8 @@ RABID WOLVES - A pack of very angry wolves hunt you!<br>
 WRATHWARDEN - Not one, but FOUR Wardens are on to you!<br>
 BATTYBATS - So annoying!<br>
 DANCING ENTITY - Mischievous little devils!<br>
+
+Omit any spaces in the spell name to cast with the /cast <spell> <player> command.<br>
+So, /cast RABIDWOLVES bob_builder - will cast the Rabid Wolves spell on bob.
 
 Compiled for 1.19, and compiled with Java 17.
