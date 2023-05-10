@@ -77,7 +77,6 @@ public class CommandListener implements CommandExecutor {
 						killed++;
 					}
 				}
-				log.log(Level.INFO, "debug - removed " + killed + " entities");
 				return true;
 			}
 
@@ -96,13 +95,13 @@ public class CommandListener implements CommandExecutor {
 							mobname = mobname + " " + args[i];
 						}
 						if (entityname.contains(mobname)) {
+							log.log(Level.INFO, "debug - killnamed - removing " + mobname + ", uuid: " +entity.getUniqueId().toString());
 							entity.remove();
 							killed++;
 						}
 					} catch (Exception e) {
 					}
 				}
-				log.log(Level.INFO, "debug - removed " + killed + " entities");
 				return true;
 			}
 
@@ -115,7 +114,8 @@ public class CommandListener implements CommandExecutor {
 				sender.sendMessage(chatmsgprefix + "Valid spells are:");
 				sender.sendMessage(chatmsgprefix + "    FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD,");
 				sender.sendMessage(chatmsgprefix + "    FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT,");
-				sender.sendMessage(chatmsgprefix + "    EVILWITCH, ANGRYBEES, RABIDWOLVES");
+				sender.sendMessage(chatmsgprefix + "    EVILWITCH, ANGRYBEES, RABIDWOLVES, WRATHWARDEN,");
+				sender.sendMessage(chatmsgprefix + "    BATTYBATS, DANCINGENTITY");
 				return true;
 			}
 			boolean playeronline = false;

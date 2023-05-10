@@ -20,7 +20,7 @@ import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.Bat;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.DragonFireball;
 import org.bukkit.entity.Entity;
@@ -29,8 +29,8 @@ import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.LargeFireball;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Warden;
 import org.bukkit.entity.Witch;
 import org.bukkit.entity.Wolf;
 import org.bukkit.Bukkit;
@@ -66,7 +66,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// spell types we support
 	public static enum SpellType {
-		FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD, FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT, EVILWITCH, ANGRYBEES, RABIDWOLVES
+		FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD, FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT, EVILWITCH, ANGRYBEES,
+		RABIDWOLVES, WRATHWARDEN, BATTYBATS, DANCINGENTITY
 	}
 	
 	// spell randomizer 
@@ -79,7 +80,16 @@ public class OBWizardFun extends JavaPlugin implements Listener
         int x = rand.nextInt(clazz.getEnumConstants().length);
         return clazz.getEnumConstants()[x];
     }
-
+	
+	// entities allowed for dancing entity spell
+	public static enum DancingEntities {
+		ALLAY, BAT, VEX
+	}
+	// dancing entity randomizer
+	private <T extends Enum<DancingEntities>> T randomEntity(Class<T> clazz){
+        int x = rand.nextInt(clazz.getEnumConstants().length);
+        return clazz.getEnumConstants()[x];
+    }
 	// Evil witch names and randomizer
 	private enum WitchName {
 		Agatha, Agnes, Cecily, Cruella, Deirdra, Desdemona, Edith, Elspeth, Elvira, Endora, Esmerelda, Gertrude, Greta, Grimhild, Hag, Hestia, Hilda, Hildy, Hyacinth, Isla, Lucinda, Mabel,
@@ -89,12 +99,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
         int x = rand.nextInt(clazz.getEnumConstants().length);
         return clazz.getEnumConstants()[x];
     }
+	
+	// spawn points of wardens in world
+	private ArrayList<Location> wardenspawns = new ArrayList<Location>();
 
 	// entity trackers
 	private HashMap<String, SpellEntity> evilwitchtracker = new HashMap<String, SpellEntity>();
 	private HashMap<String, SpellEntity> angrybeetracker = new HashMap<String, SpellEntity>();
 	private HashMap<String, SpellEntity> rabidwolftracker = new HashMap<String, SpellEntity>();
-	
+	private HashMap<String, SpellEntity> wrathwardentracker = new HashMap<String, SpellEntity>();
+	private HashMap<String, SpellEntity> battybattracker = new HashMap<String, SpellEntity>();
+
 	// mappings of messages, sounds and particles to our spells
 	private HashMap<SpellType, HashMap<String, String>> messagemap = new HashMap<SpellType,HashMap<String,String>>();
 	private HashMap<SpellType, Sound> soundmap = new HashMap<SpellType, Sound>();
@@ -106,11 +121,15 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	private int evilwitchchecker;
 	private int angrybeechecker;
 	private int rabidwolfchecker;
+	private int wrathwardenchecker;
+	private int battybatchecker;
 	private long startdelay = 20L;				// wait in seconds before starting spell casting
-	private long spellinterval = 30L;			// interval in seconds between random spells
+	private long spellinterval = 60L;			// interval in seconds between random spells
 	private long evilwitchcheckinterval = 5L;		// interval in seconds between checks on evil witches
 	private long angrybeecheckinterval = 3L;		// interval in seconds between checks on angry bees
 	private long rabidwolfcheckinterval = 5L;		// interval in seconds between checks on angry bees
+	private long wrathwardencheckinterval = 5L;			// interval in seconds between checks on wardens
+	private long battybatcheckinterval = 2L;			// interval in seconds between checks on batty bats
 	private boolean spelltrackerchecking = false;
 	
     public void onEnable() {
@@ -120,7 +139,6 @@ public class OBWizardFun extends JavaPlugin implements Listener
     	registerListeners();
     	
     	// setup messages
-    	// TODO: move to a config file later
     	messagemap.put(SpellType.FIRE, new HashMap<String,String>());
     		messagemap.get(SpellType.FIRE).put("single", ChatColor.AQUA + "A wizard just set #PLAYER# on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
     		messagemap.get(SpellType.FIRE).put("doall", ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
@@ -160,6 +178,15 @@ public class OBWizardFun extends JavaPlugin implements Listener
         messagemap.put(SpellType.RABIDWOLVES, new HashMap<String,String>());
             messagemap.get(SpellType.RABIDWOLVES).put("single", ChatColor.AQUA + "A wizard released a pack of rabid wolves on #PLAYER#!");
             messagemap.get(SpellType.RABIDWOLVES).put("doall", ChatColor.AQUA + "A pack of rabid wolves are on the loose! Run!");
+        messagemap.put(SpellType.WRATHWARDEN, new HashMap<String,String>());
+            messagemap.get(SpellType.WRATHWARDEN).put("single", ChatColor.AQUA + "A wizard spawned March of the Wardens on #PLAYER#!");
+            messagemap.get(SpellType.WRATHWARDEN).put("doall", ChatColor.AQUA + "March of the Wardens was invoked by a wizard! Get outta here!");
+        messagemap.put(SpellType.BATTYBATS, new HashMap<String,String>());
+            messagemap.get(SpellType.BATTYBATS).put("single", ChatColor.AQUA + "A wizard sent a cloud of batty bats to annoy #PLAYER#!");
+            messagemap.get(SpellType.BATTYBATS).put("doall", ChatColor.AQUA + "A cloud of Batty Bats was released by a wizard! Get your tennis racket!");
+        messagemap.put(SpellType.DANCINGENTITY, new HashMap<String,String>());
+            messagemap.get(SpellType.DANCINGENTITY).put("single", ChatColor.AQUA + "A wizard want's to party! What's that dancing around #PLAYER#?");
+            messagemap.get(SpellType.DANCINGENTITY).put("doall", ChatColor.AQUA + "Looks like it's party time! Let the dancing begin!");
         	
         // setup sounds - some effects have their own sound
         soundmap.put(SpellType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
@@ -172,13 +199,22 @@ public class OBWizardFun extends JavaPlugin implements Listener
         soundmap.put(SpellType.EVILWITCH, Sound.ENTITY_WITCH_CELEBRATE);
         soundmap.put(SpellType.ANGRYBEES, Sound.ENTITY_BEE_LOOP_AGGRESSIVE);
         soundmap.put(SpellType.RABIDWOLVES, Sound.ENTITY_WOLF_HOWL);
-        	
+        soundmap.put(SpellType.WRATHWARDEN, Sound.ENTITY_WARDEN_ANGRY);
+        soundmap.put(SpellType.BATTYBATS, Sound.ENTITY_BAT_LOOP);
+        soundmap.put(SpellType.BATTYBATS, Sound.ENTITY_ALLAY_AMBIENT_WITH_ITEM);
+
         // setup particle map - some effects do not require a particle
         particlemap.put(SpellType.SOAK, Particle.WATER_DROP);
         particlemap.put(SpellType.FROST, Particle.REDSTONE);
         particlemap.put(SpellType.PEE, Particle.DRIPPING_HONEY);
         particlemap.put(SpellType.GEYSER, Particle.CLOUD);
 
+        // warden spawn points around lobby
+    	wardenspawns.add(new Location(Bukkit.getWorld("world"), 30.5, 49.0, 0.5, 90.0f, 0.0f));
+    	wardenspawns.add(new Location(Bukkit.getWorld("world"), 0.5, 49.0, -29.5, 0.0f, 0.0f));
+    	wardenspawns.add(new Location(Bukkit.getWorld("world"), -29.5, 49.0, 0.5, -90.0f, 0.0f));
+    	wardenspawns.add(new Location(Bukkit.getWorld("world"), 0.5, 49.0, 30.5, 180.0f, 0.0f));
+    	
         BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
         
         // entity based spell checkers - clears entities that have despawned, need despawning or need retargetting
@@ -202,6 +238,20 @@ public class OBWizardFun extends JavaPlugin implements Listener
         		spellEntityChecker(rabidwolftracker, EntityType.WOLF, "Rabid Wolf");
         	}
         }, startdelay*20, rabidwolfcheckinterval*20);
+
+        wrathwardenchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        	@Override
+        	public void run() {
+        		spellEntityChecker(wrathwardentracker, EntityType.WARDEN, "Wizards Warden");
+        	}
+        }, startdelay*20, wrathwardencheckinterval*20);
+
+        battybatchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        	@Override
+        	public void run() {
+        		spellEntityChecker(battybattracker, EntityType.BAT, "Batty Bat");
+        	}
+        }, startdelay*20, battybatcheckinterval*20);
     
         
         // enable the main task
@@ -241,8 +291,42 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		Bukkit.getScheduler().cancelTask(evilwitchchecker);
 		Bukkit.getScheduler().cancelTask(angrybeechecker);
 		Bukkit.getScheduler().cancelTask(rabidwolfchecker);
+		Bukkit.getScheduler().cancelTask(wrathwardenchecker);
+		Bukkit.getScheduler().cancelTask(battybatchecker);
 		Bukkit.getScheduler().cancelTask(taskid);
-		Bukkit.getLogger().info("[OBFireworksOnJoin] Plugin unloaded");
+		
+		// remove any tracker entities and world entities that might be left over
+		log.log(Level.INFO, logmsgprefix + "Unloading Evil Witches");
+		RemoveWorldEntities(evilwitchtracker, EntityType.WITCH, "Evil Witch");
+		log.log(Level.INFO, logmsgprefix + "Unloading Angry Bees");
+		RemoveWorldEntities(evilwitchtracker, EntityType.BEE, "Angry Bee");
+		log.log(Level.INFO, logmsgprefix + "Unloading Rabid Wolves");
+		RemoveWorldEntities(evilwitchtracker, EntityType.WOLF, "Rabid Wolf");
+		log.log(Level.INFO, logmsgprefix + "Unloading Wizards Wardens");
+		RemoveWorldEntities(evilwitchtracker, EntityType.WARDEN, "Wizards Warden");
+		log.log(Level.INFO, logmsgprefix + "Unloading Batty Bats");
+		RemoveWorldEntities(evilwitchtracker, EntityType.BAT, "Batty Bat");
+		
+		log.log(Level.INFO, logmsgprefix + "Plugin unloaded");
+	}
+
+
+	// remove any entities from world that might be left over
+	private void RemoveWorldEntities(HashMap<String, SpellEntity> spelltracker, EntityType type, String mobname) {
+		Iterator<Entity> weit = Bukkit.getWorld("world").getEntities().iterator();
+		int mobcount = 0;
+		while (weit.hasNext()) {
+			Entity entity = weit.next();
+			if (entity.getCustomName() != null) {
+				String entityname = ChatColor.stripColor(entity.getCustomName());
+				if (entity.getType().equals(type) && entityname.contains(mobname)) {
+					entity.remove();
+					mobcount++;
+				}
+			}
+		}
+		log.log(Level.INFO, logmsgprefix + "Removed " + mobcount + " entities from world");
+		spelltracker.clear();
 	}
 
 	// return this instance
@@ -264,17 +348,15 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 
 	// check a spell is valid
-	public boolean isSpell(String chkspell) {
-		SpellType spell = null;
+	public boolean isSpell(String spell) {
 		try {
-			spell = SpellType.valueOf(chkspell);
+			SpellType.valueOf(spell);
 		} catch (Exception e) {
 			return false;
 		}
 		return true;
 	}
 	public SpellType getSpell(String spell) {
-
 		if (isSpell(spell)) {
 			return SpellType.valueOf(spell);
 		}
@@ -300,7 +382,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					if (spellentity != null) {
 						Player target = Bukkit.getPlayer(UUID.fromString(spellentity.getTargetUUID()));
 						if (target == null || target.isDead() || target.isInWater() ||
-								target.getGameMode().equals(GameMode.CREATIVE) || target.getGameMode().equals(GameMode.SPECTATOR) ||
+								//target.getGameMode().equals(GameMode.CREATIVE) || target.getGameMode().equals(GameMode.SPECTATOR) ||
 								target.getLocation().getY() > 200) {
 							// player no longer in world so despawn entities
 							entity.playEffect(EntityEffect.ENTITY_POOF);
@@ -313,78 +395,100 @@ public class OBWizardFun extends JavaPlugin implements Listener
 								entity.remove();								
 								spelltracker.remove(entityuuid);
 							} else {
-								Mob mob = (Mob) entity;
+								
 								// move mob to target player if player has moved away
 								int distance = 7;
 								switch (entity.getType()) {
 								case WITCH:
-									distance = 10;
+									distance = 1000;
 									break;
 								case WOLF:
-									distance = 15;
+									distance = 1500;
+									break;
+								case WARDEN:
+									distance = 1000;	//essentially dont move wardens
+									break;
+								case BAT:
+									distance = 2;
 									break;
 								default:
 									distance = 7;
 									break;
 								}
-								if (target.getLocation().distance(entity.getLocation()) > distance) {
-									entity.teleport(target);
+								double mobtoplayerdistance = target.getLocation().distance(entity.getLocation());
+								if ( mobtoplayerdistance > distance) {
+									if (entity.getType() == EntityType.BAT) {
+										Location newbatloc = getRandomAirLocation(target.getLocation(), 2, 2, true);
+										entity.teleport(newbatloc);
+									} else {
+										//entity.teleport(target);
+									}
 								}
-								if (mob.getTarget() == null) {
-									// re-target mob onto target player
-									switch (type) {
-									case BEE:
-										Bee angrybee = (Bee) mob;
+								
+								// see if we need to re-target mob onto player as some mobs do need that
+								if (entity.getType().equals(EntityType.BEE)) {
+									Bee angrybee = (Bee) entity;
+									if ( angrybee.getTarget() == null ) {
 										angrybee.setHasStung(false);
 										angrybee.setTarget(target);
 										angrybee.setAnger(500);
 										angrybee.attack(target);
-										target.playSound(target.getLocation(), soundmap.get(SpellType.ANGRYBEES), 1.0f, 1.0f);
-										break;
-									case WITCH:
-										Witch evilwitch = (Witch) mob;
+										if (mobtoplayerdistance < 10 ) {
+											target.playSound(target.getLocation(), soundmap.get(SpellType.ANGRYBEES), 1.0f, 1.0f);
+										}
+									} else {
+										if (mobtoplayerdistance < 10) {
+											double buzzer = rand.nextDouble();
+											if (buzzer < 0.3) {
+												target.playSound(target.getLocation(), Sound.ENTITY_BEE_LOOP, 1.0f, 1.0f);
+											} else if (buzzer < 0.6) {
+												target.playSound(target.getLocation(), Sound.ENTITY_BEE_LOOP_AGGRESSIVE, 1.0f, 1.0f);
+											} else {
+												target.playSound(target.getLocation(), Sound.ENTITY_BEE_STING, 1.0f, 1.0f);
+											}
+											target.playSound(target.getLocation(), soundmap.get(SpellType.ANGRYBEES), 1.0f, 1.0f);
+										}
+									}
+								} else if (entity.getType().equals(EntityType.WITCH)) {
+									Witch evilwitch = (Witch) entity;
+									if ( evilwitch.getTarget() == null) {
 										evilwitch.setTarget(target);
 										evilwitch.attack(target);
-										target.playSound(target.getLocation(), Sound.ENTITY_WITCH_AMBIENT, 1.0f, 1.0f);
-										break;
-									case WOLF:
-										Wolf rabidwolf = (Wolf) mob;
+										if ( mobtoplayerdistance < 10) {
+											target.playSound(target.getLocation(), Sound.ENTITY_WITCH_AMBIENT, 1.0f, 1.0f);
+										}
+									} else {
+										if ( mobtoplayerdistance < 10) {
+											target.playSound(target.getLocation(), Sound.ENTITY_WITCH_CELEBRATE, 1.0f, 1.0f);
+										}
+									}									
+								} else if (entity.getType().equals(EntityType.WOLF)) {
+									Wolf rabidwolf = (Wolf) entity;
+									if ( rabidwolf.getTarget() == null ) {
 										rabidwolf.setTarget(target);
 										rabidwolf.attack(target);
+									} else {
 										double growlorhowl = rand.nextDouble();
-										if (growlorhowl < 0.5) {
-											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_GROWL, 1.0f, 1.0f);
-										} else {
-											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_HOWL, 1.0f, 1.0f);
+										if ( mobtoplayerdistance < 10) {
+											if (growlorhowl < 0.5) {
+												target.playSound(target.getLocation(), Sound.ENTITY_WOLF_GROWL, 1.0f, 1.0f);
+											} else {
+												target.playSound(target.getLocation(), Sound.ENTITY_WOLF_HOWL, 1.0f, 1.0f);
+											}
 										}
-										break;
-									default:
-										break;
+									}									
+								} else if (entity.getType().equals(EntityType.WARDEN)) {
+									Warden wrathwarden = (Warden) entity;
+									if ( wrathwarden.getTarget() == null ) {
+										wrathwarden.setAnger(target, 80);
 									}
-								} else {
-									// no need to re target, but do something anyway - play sounds perhpas?
-									switch (type) {
-									case BEE:
-										double buzzer = rand.nextDouble();
-										if (buzzer < 0.3) {
-											target.playSound(target.getLocation(), Sound.ENTITY_BEE_LOOP, 1.0f, 1.0f);
-										} else if (buzzer < 0.6) {
-											target.playSound(target.getLocation(), Sound.ENTITY_BEE_LOOP_AGGRESSIVE, 1.0f, 1.0f);
-										} else {
-											target.playSound(target.getLocation(), Sound.ENTITY_BEE_STING, 1.0f, 1.0f);
+								} else if (entity.getType().equals(EntityType.BAT)) {
+									Bat battybat = (Bat) entity;
+									if ( battybat.getTarget() == null ) {
+										battybat.setTarget(target);
+										if ( mobtoplayerdistance < 10) {
+											target.playSound(target.getLocation(), Sound.ENTITY_BAT_HURT, 1.0f, 1.0f);
 										}
-										target.playSound(target.getLocation(), soundmap.get(SpellType.ANGRYBEES), 1.0f, 1.0f);
-										break;
-									case WOLF:
-										double growlorhowl = rand.nextDouble();
-										if (growlorhowl < 0.5) {
-											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_GROWL, 1.0f, 1.0f);
-										} else {
-											target.playSound(target.getLocation(), Sound.ENTITY_WOLF_HOWL, 1.0f, 1.0f);
-										}
-										break;
-									default:
-										break;
 									}
 								}
 							}
@@ -395,7 +499,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					}
 				}
 			}
-			// cross check tracker gainst world entities
+			
+			// clear up tracker entries that have no world entity
 			ArrayList<String> worldentities = new ArrayList<String>();
 			Iterator<Entity> weit = Bukkit.getWorld("world").getEntities().iterator();
 			while (weit.hasNext()) {
@@ -412,12 +517,46 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					stit.remove();
 				}
 			}
+
 			// check tracker vs world entities
 			spelltrackerchecking = false;
 		}
 	}
 	
-	// return a random location around a player within a range
+	// return a random location in the air around a player within range
+	// or return player location if unsuccessful after a set number of tries
+	Location getRandomAirLocation(Location loc, int rangelow, int rangehigh, boolean keepY) {
+		boolean goodspot = false;
+		int tries = 0;
+		while (!goodspot && tries < 5) {
+			int offsetx = 0;
+			int offsetz = 0;
+			int offsety = 0;
+			while (offsetx == 0 && offsetz == 0) {
+				offsetx = (int) (Math.random() * ((rangehigh-rangelow)+1)+rangelow);
+				offsetx = (int) (rand.nextDouble() < 0.5 ? offsetx-(offsetx*2) : offsetx);
+				offsetz = (int) (Math.random() * ((rangehigh-rangelow)+1)+rangelow);
+				offsetz = (int) (rand.nextDouble() < 0.5 ? offsetz-(offsetz*2) : offsetz);
+				if ( keepY) {
+					offsety = 0;
+				} else {
+					offsety = (int) (Math.random() * ((rangehigh-rangelow)+1)+rangelow);
+					offsety = (int) (rand.nextDouble() < 0.5 ? offsety-(offsety*2) : offsety);
+				}
+			}
+
+			Location tryspot = null;
+			tryspot = loc.clone();
+			tryspot.add(offsetx, offsety, offsetz);
+			if (tryspot.getBlock().getType() == Material.AIR) {
+					return tryspot;
+			}
+			tries++;
+		}
+		return loc;
+	}
+	
+	// return a random location around a player within a range or return player location if unsuccessful
 	Location getRandomLocation(Location loc, int rangelow, int rangehigh) {
 		boolean goodspot = false;
 		int tries = 0;
@@ -432,7 +571,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
 				offsetz = (int) (rand.nextDouble() < 0.5 ? offsetz-(offsetz*2) : offsetz);
 			}
 
-			Location tryspot = loc.clone();	tryspot.add(offsetx, 0, offsetz); tryspot.setY(tryspot.getWorld().getHighestBlockAt(tryspot).getY()+1); Block blockatspot = tryspot.getBlock(); 
+			Location tryspot = loc.clone();	tryspot.add(offsetx, 0, offsetz); tryspot.setY(tryspot.getWorld().getHighestBlockAt(tryspot).getY()+1);
+			Block blockatspot = tryspot.getBlock();
 			Location underspot = tryspot.clone(); underspot.add(0, -1, 0); Block blockunderspot = underspot.getBlock();
 			Location overspot = tryspot.clone(); overspot.add(0, 1, 0);  Block blockoverspot = overspot.getBlock();
 			blockmatch[1] = blockatspot.getType(); blockmatch[0] = blockunderspot.getType(); blockmatch[2] = blockoverspot.getType();
@@ -471,7 +611,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		Iterator<Player> pit = eligibleplayers.iterator();
 		while(pit.hasNext()) {
 			Player player = pit.next();
-			if (player.isDead() || player.isInWater() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
+			if (player.isDead() || player.isInWater() || player.isFlying() || player.isSwimming() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
 				if (docaster) {
 					caster.sendMessage(chatmsgprefix + ChatColor.RED + "Cannot cast a spell on " + ChatColor.WHITE + player.getName() + ChatColor.RED + " right now");
 				}
@@ -530,6 +670,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
     		case WEIRD:
     			castWeirdSpell(player);
     			break;
+    		case DANCINGENTITY:
+    			castDancingEntitySpell(player, EntityType.valueOf(randomEntity(DancingEntities.class).toString()), (int) (Math.random() * ((8-1)+1)+1), 2);
+    			break;
     		case FROST:
     			castFrostSpell(player);
     			break;
@@ -554,10 +697,62 @@ public class OBWizardFun extends JavaPlugin implements Listener
     		case RABIDWOLVES:
     			spawnRabidWolves(player);
     			break;
+    		case WRATHWARDEN:
+    			spawnWrathWarden(player);
+    			break;
+    		case BATTYBATS:
+    			spawnBattyBats(player);
+    			break;
     		}
     	}
     }
-	
+
+	// batty bats spell
+	void spawnBattyBats(Player player) {
+		if (battybattracker.size() < 25 && !spelltrackerchecking) {
+			int swarmsize = (int) (Math.random() * (35-20+1)+20);
+			for (int i = 0; i < swarmsize; i++) {
+				Location batspawn = getRandomAirLocation(player.getLocation(), 2, 2, false);
+				LivingEntity battybatbase = (LivingEntity) player.getWorld().spawnEntity(batspawn, EntityType.BAT);
+				Bat battybat = (Bat) battybatbase;
+				battybat.setCustomName(ChatColor.RED + "Batty" + " " + ChatColor.GOLD + "Bat");
+				battybat.setTarget(player);
+				if (!battybat.isGlowing()) {
+					battybat.setGlowing(true);
+				}
+				battybattracker.put(battybat.getUniqueId().toString(),
+					new SpellEntity(battybat.getCustomName(),
+							battybat.getUniqueId().toString(),
+							player.getUniqueId().toString(),
+					(int) (Math.random() * (30 - 15 + 1 ) + 15)*20)
+				);
+			}
+		}
+
+	}
+
+	// wrath of the wardens spell
+	void spawnWrathWarden(Player player) {
+		if ( wrathwardentracker.size() == 0 && !spelltrackerchecking && player.getLocation().distance(Bukkit.getWorld("world").getSpawnLocation()) < 100) {
+			for (int i = 0; i < 4; i++) {
+				Location wardenspawn = wardenspawns.get(i);
+				LivingEntity wrathwardenbase = (LivingEntity) player.getWorld().spawnEntity(wardenspawn, EntityType.WARDEN);
+				Warden wrathwarden = (Warden) wrathwardenbase;
+				wrathwarden.setCustomName(ChatColor.AQUA +"" + ChatColor.BOLD + "Wizards Warden");
+				wrathwarden.setTarget(player);
+				wrathwarden.setRemoveWhenFarAway(false);
+				wrathwarden.setAnger(player, 80);
+				wrathwardentracker.put(wrathwarden.getUniqueId().toString(),
+					new SpellEntity(wrathwarden.getCustomName(),
+							wrathwarden.getUniqueId().toString(),
+							player.getUniqueId().toString(),
+							(int) 45 * 20
+						)
+				);
+			}
+		}
+	}
+
 	// pack of rabid wolves
 	void spawnRabidWolves(Player player) {
 		if (rabidwolftracker.size() < 15 && !spelltrackerchecking) {
@@ -642,11 +837,13 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// firework spell
 	void castFireworkSpell(Player player) {
 		Location loc = player.getLocation();
-		final Firework f = (Firework)loc.getWorld().spawn(loc, (Class)Firework.class);
+		//final Firework f = (Firework)loc.getWorld().spawn(loc, (Class)Firework.class);
+		final Firework f = (Firework)loc.getWorld().spawnEntity(loc, EntityType.FIREWORK);
 		final FireworkMeta fm = f.getFireworkMeta();
  		fm.addEffect(buildFirework());
 		fm.setPower(rand.nextInt(6));
 		f.setFireworkMeta(fm);
+		
 	}
 	FireworkEffect buildFirework() {
 		double r = rand.nextDouble(); boolean doflicker = r < 0.5 ? true : false;
@@ -754,6 +951,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	// frost spell
 	void castFrostSpell(Player player) {
+		player.setFreezeTicks(100);
 		new BukkitRunnable(){
 			double t = 0;
 			double x, y, z = 0;
@@ -782,7 +980,6 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	// pee spell
 	void castPeeSpell(Player player) {
-		//TODO: unnecessarily complicated math for this effect - rework as a proper projectile stream (facing direction) or a simple pool like this ultimately does
 		new BukkitRunnable() {
 			double phi = 0;
 			public void run() {
@@ -827,7 +1024,119 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			}
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
 	}
+/*
+	private void castDancingEntitySpell(Player player, EntityType entitytype, double radius) {
+		float effectlife = 10000f;
+		double radialspeed = 2.0 * Math.PI / 0.5;
+
+		Location loc = player.getLocation().clone();
+		LivingEntity allay = (LivingEntity) player.getWorld().spawnEntity(loc, entitytype);
+		allay.setCustomName(ChatColor.RED + "Dancing" + " " + ChatColor.GOLD + entitytype.name());
+		
+		new BukkitRunnable() {
+
+			long startTime = System.currentTimeMillis();
+			long elapsedTime = 0L;
+
+			double x = 0; double z = 1; double degrees = 0;
+
+			Particle.DustOptions frostparticle = new Particle.DustOptions(Color.AQUA, 1.0f);
+
+			public void run() {
+
+				double angle = (radialspeed * degrees / 20);
+				x = radius * Math.cos(angle);
+                z = radius * Math.sin(angle);
+				
+				Location loc = Bukkit.getPlayer(player.getUniqueId()).getLocation();
+                loc.add(x, 2, z);
+                
+                allay.teleport(loc);
+                loc.getWorld().spawnParticle(particlemap.get(SpellType.FROST), loc, 0, 0, 0, 0, frostparticle);
+
+                degrees++;
+				if (degrees >= 360) { degrees = 0; }
+
+				elapsedTime = (new Date()).getTime() - startTime;
+				if (elapsedTime > effectlife) {
+					allay.remove();
+					this.cancel();
+				}
+			}
+		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 2);
+	}
+*/
+	private double convertMcAngle(double mcdegrees) {
+
+		int d = (int) mcdegrees;
+		d = Math.abs(d);
+		double f = Math.abs(mcdegrees) - d;
+		double angle = mcdegrees < -0.9 ? Math.abs(180 + (180 - d)) + f : Math.abs(mcdegrees);
+		return Math.abs(angle);
+	}
 	
+	private void castDancingEntitySpell(Player player, EntityType entitytype, int instances, double radius) {
+		
+		float effectlife = 10000f;
+
+		LivingEntity[] entities = new LivingEntity[instances];
+		double[] entitydegree = new double[instances];
+
+		double playerdegree = convertMcAngle(player.getLocation().getYaw());
+
+		for (int i = 0; i < instances; i++) {
+			
+			entitydegree[i] = ((double)(360 / instances) * i) + playerdegree;
+			if ( entitydegree[i] > 359 ) { entitydegree[i] -= 360; }
+			
+			double x = radius * Math.sin(Math.toRadians(entitydegree[i]));
+            double z = radius * Math.cos(Math.toRadians(entitydegree[i]));
+			
+            Location loc = player.getLocation().clone();
+            loc.add(x, 2, z);
+
+            entities[i] = (LivingEntity) player.getWorld().spawnEntity(loc, entitytype);
+            entities[i].setCustomName(ChatColor.RED + "Dancing" + " " + ChatColor.GOLD + entitytype.name());
+		}
+
+		new BukkitRunnable() {
+
+			long startTime = System.currentTimeMillis();
+			long elapsedTime = 0L;
+
+			double x = 0; double z = 0;
+			Particle.DustOptions frostparticle = new Particle.DustOptions(Color.AQUA, 1.0f);
+
+			public void run() {
+
+				for (int i = 0; i < instances; i++) {
+
+		            entities[i].getLocation().getWorld().spawnParticle(particlemap.get(SpellType.FROST), entities[i].getLocation().add(0,0.5,0), 0, 0, 0, 0, frostparticle);
+		            
+					entitydegree[i]+=(instances*3);
+					if (entitydegree[i] >= 360) { entitydegree[i] = 0; }
+					
+					x = radius * Math.sin(Math.toRadians(entitydegree[i]));
+		            z = radius * Math.cos(Math.toRadians(entitydegree[i]));
+
+		            Location loc = player.getLocation().clone();
+		            loc.add(x, 2, z);
+
+		            Vector direction = loc.toVector().subtract(entities[i].getLocation().toVector());
+		            entities[i].setVelocity(direction);
+				}
+
+				elapsedTime = (new Date()).getTime() - startTime;
+				if (elapsedTime > effectlife) {
+					for (int i = 0; i < instances; i++) {
+						entities[i].remove();
+						this.cancel();
+					}
+				}
+			}
+		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 2);
+	}
+
 	// fireball attack spell
 	void castFireballSpell(Player player) {
 		int multiplier = rand.nextDouble() <= 0.1 ? 2+rand.nextInt(2) : 1;

@@ -25,41 +25,48 @@ public class EventListener implements Listener
   
 	@EventHandler
 	public void entityTargetEntity(EntityTargetLivingEntityEvent event) {
-		String entityuuid = event.getEntity().getUniqueId().toString();
-		String targetuuid = "notarget";
-		if ( event.getTarget() != null ) {
-			targetuuid = event.getTarget().getUniqueId().toString();
-		}
+		//String entityuuid = event.getEntity().getUniqueId().toString();
+		//String targetuuid = "notarget";
+		//if ( event.getTarget() != null ) {
+		//	targetuuid = event.getTarget().getUniqueId().toString();
+		//}
 	}
 	
 	@EventHandler
 	public void targetEvent( EntityTargetEvent event ) {
 		Entity entity = event.getEntity();
-		String entityuuid = entity.getUniqueId().toString();
-		String targetuuid = "notarget";
+		entity.getUniqueId().toString();
 		String entityname = "";
 		if (entity.getCustomName() != null ) {
 			entityname = ChatColor.stripColor(entity.getCustomName());
 		}
-		if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH) || entity.getType().equals(EntityType.WOLF)) {
-			if ( !entityname.contains("Evil Witch") && !entityname.contains("Angry Bee") || entityname.contains("Rabid Wolf")) {
+		if (entity.getType().equals(EntityType.BEE) || entity.getType().equals(EntityType.WITCH) ||
+				entity.getType().equals(EntityType.WOLF) || entity.getType().equals(EntityType.WARDEN)) {
+			if ( !entityname.contains("Evil Witch") && !entityname.contains("Angry Bee") &&
+					!entityname.contains("Rabid Wolf") && !entityname.contains("Wizards Warden")) {
 				event.setCancelled(true);
 			}
 		}
-		if ( event.getTarget() != null ) {
-			targetuuid = event.getTarget().getUniqueId().toString();
-		}
+		//if ( event.getTarget() != null ) {
+		//	targetuuid = event.getTarget().getUniqueId().toString();
+		//}
 	}
 	
 	@EventHandler
 	public void damageEvent(EntityDamageByEntityEvent event) {
-		if (event.getDamager().getType().equals(EntityType.BEE) || event.getDamager().getType().equals(EntityType.WOLF) || event.getDamager().getType().equals(EntityType.SPLASH_POTION)) {
+		//log.log(Level.INFO, "debug - a: " + event.getCause() + ", " + event.getEventName() + ", " + event.getDamager().getType().toString());
+		/*
+		if (event.getDamager().getType().equals(EntityType.BEE) || event.getDamager().getType().equals(EntityType.WOLF)
+				|| event.getDamager().getType().equals(EntityType.WARDEN) || event.getDamager().getType().equals(EntityType.SPLASH_POTION)) {
 			event.setDamage(0.01);
 		} else if (event.getDamager().getType().equals(EntityType.AREA_EFFECT_CLOUD)) {
 			event.setDamage(0.05);
 		} else if (event.getDamager().getType().equals(EntityType.SPLASH_POTION)) {
 			event.setDamage(0.03);
 		}
+		*/
+		event.setDamage(0);
+		event.setCancelled(true);
 	}
 	
 	@EventHandler
@@ -68,11 +75,20 @@ public class EventListener implements Listener
 		if (event.getEntity() instanceof Player) {
 			player = (Player) event.getEntity();
 		}
-		if (event.getCause().equals(DamageCause.POISON)) {
+		//log.log(Level.INFO, "debug - b: " + event.getCause() +", " + event.getEventName() + ", " + event.getEntityType().toString());
+		/*
+		if (event.getCause().equals(DamageCause.POISON) || event.getCause().equals(DamageCause.SONIC_BOOM)) {
 			event.setDamage(0.03);
+			if (event.getCause().equals(DamageCause.POISON) && player != null) {
+				player.removePotionEffect(PotionEffectType.POISON);
+			}
+			event.setCancelled(true);
 		} else if (event.getCause().equals(DamageCause.FLY_INTO_WALL) || event.getCause().equals(DamageCause.ENTITY_EXPLOSION)) {
 			event.setCancelled(true);
 		}
+		*/
+		event.setDamage(0);
+		event.setCancelled(true);
 	}
 	
 	@EventHandler
