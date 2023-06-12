@@ -28,4 +28,4 @@ DANCING ENTITY - Mischievous little devils!<br>
 Omit any spaces in the spell name to cast with the /cast <spell> <player> command.<br>
 So, /cast RABIDWOLVES bob_builder - will cast the Rabid Wolves spell on bob.
 
-Compiled for 1.19, and compiled with Java 17.
+Compiled for 1.20, and compiled with Java 17.
