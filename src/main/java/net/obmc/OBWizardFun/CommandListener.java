@@ -1,14 +1,16 @@
 package net.obmc.OBWizardFun;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -28,6 +30,14 @@ public class CommandListener implements CommandExecutor {
 		logmsgprefix = OBWizardFun.getInstance().getLogMsgPrefix();
 	}
 	
+	private record MobList( String type, String name, Location loc ) {
+		public MobList( String type, String name, Location loc ) {
+			this.type = type;
+			this.name = name;
+			this.loc = loc;
+		}
+	}
+	
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
@@ -39,13 +49,38 @@ public class CommandListener implements CommandExecutor {
 
 		// process the command and any arguments
 		if (command.getName().equalsIgnoreCase("cast")) {
+			
 			//TODO: remove when testing done
+			// compile list of mobs in world and their location, output to log grouping by type
+			// allow for just a specific mob type to be listed
 			if (args[0].equals("show")) {
+				
+				String filterType = "";
+				if ( args.length > 1 ) {
+					filterType = args[1];
+				}
+				
+				List< MobList > mobs = new ArrayList<>();
 				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
 				while (eit.hasNext()) {
 					Entity entity = eit.next();
-					log.log(Level.INFO, "debug - " + entity.getType().toString() +", " + entity.getCustomName() + ", " + entity.getLocation().getX() + ", " + entity.getLocation().getY() + ", " + entity.getLocation().getZ());
+					MobList mob = new MobList( entity.getType().name(), entity.getCustomName(), entity.getLocation() );
+					mobs.add( mob );
 				}
+				Map< String, List<MobList>> worldmobs = mobs.stream()
+						.collect( Collectors.groupingBy( MobList::type ) );
+				final String ft = filterType;
+				worldmobs.forEach( ( type, moblist ) -> {
+					moblist.forEach( mob -> {
+						if ( !ft.isEmpty() ) {
+							if ( type.toUpperCase().equals( ft.toUpperCase() ) ) {
+								log.log(Level.INFO, "debug - " + type + ", " + mob.name + ", " + mob.loc.getX() + ", " + mob.loc.getY() + ", " + mob.loc.getZ() );
+							}
+						} else {
+							log.log(Level.INFO, "debug - " + type + ", " + mob.name + ", " + mob.loc.getX() + ", " + mob.loc.getY() + ", " + mob.loc.getZ() );
+						}
+					});
+				});
 				return true;
 			}
 			

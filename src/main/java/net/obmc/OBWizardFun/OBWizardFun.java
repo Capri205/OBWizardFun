@@ -42,6 +42,8 @@ import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 
 
 public class OBWizardFun extends JavaPlugin implements Listener
@@ -187,7 +189,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
         messagemap.put(SpellType.DANCINGENTITY, new HashMap<String,String>());
             messagemap.get(SpellType.DANCINGENTITY).put("single", ChatColor.AQUA + "A wizard want's to party! What's that dancing around #PLAYER#?");
             messagemap.get(SpellType.DANCINGENTITY).put("doall", ChatColor.AQUA + "Looks like it's party time! Let the dancing begin!");
-        	
+        
         // setup sounds - some effects have their own sound
         soundmap.put(SpellType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
         soundmap.put(SpellType.WEIRD, Sound.AMBIENT_CRIMSON_FOREST_MOOD);
@@ -204,8 +206,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
         soundmap.put(SpellType.BATTYBATS, Sound.ENTITY_ALLAY_AMBIENT_WITH_ITEM);
 
         // setup particle map - some effects do not require a particle
-        particlemap.put(SpellType.SOAK, Particle.WATER_DROP);
-        particlemap.put(SpellType.FROST, Particle.REDSTONE);
+        particlemap.put(SpellType.SOAK, Particle.FALLING_WATER);
+        particlemap.put(SpellType.FROST, Particle.DUST_PLUME);
         particlemap.put(SpellType.PEE, Particle.DRIPPING_HONEY);
         particlemap.put(SpellType.GEYSER, Particle.CLOUD);
 
@@ -838,7 +840,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	void castFireworkSpell(Player player) {
 		Location loc = player.getLocation();
 		//final Firework f = (Firework)loc.getWorld().spawn(loc, (Class)Firework.class);
-		final Firework f = (Firework)loc.getWorld().spawnEntity(loc, EntityType.FIREWORK);
+		final Firework f = (Firework)loc.getWorld().spawnEntity(loc, EntityType.FIREWORK_ROCKET);
 		final FireworkMeta fm = f.getFireworkMeta();
  		fm.addEffect(buildFirework());
 		fm.setPower(rand.nextInt(6));
@@ -1099,6 +1101,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
             entities[i].setCustomName(ChatColor.RED + "Dancing" + " " + ChatColor.GOLD + entitytype.name());
 		}
 
+		player.sendTitle(ChatColor.GOLD + "Let's Dance!", ChatColor.LIGHT_PURPLE + "Put on your " + ChatColor.RED + "red" + ChatColor.LIGHT_PURPLE + " shoes and dance the " + ChatColor.AQUA + "blues!", 10, 60, 30);
+		
 		new BukkitRunnable() {
 
 			long startTime = System.currentTimeMillis();
