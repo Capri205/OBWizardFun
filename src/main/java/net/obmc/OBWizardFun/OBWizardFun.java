@@ -18,7 +18,9 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.Particle.DustOptions;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Bat;
 import org.bukkit.entity.Bee;
@@ -206,8 +208,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
         soundmap.put(SpellType.BATTYBATS, Sound.ENTITY_ALLAY_AMBIENT_WITH_ITEM);
 
         // setup particle map - some effects do not require a particle
+        // particles also have different data types associated with them
         particlemap.put(SpellType.SOAK, Particle.FALLING_WATER);
-        particlemap.put(SpellType.FROST, Particle.DUST_PLUME);
+        particlemap.put(SpellType.FROST, Particle.DUST);
         particlemap.put(SpellType.PEE, Particle.DRIPPING_HONEY);
         particlemap.put(SpellType.GEYSER, Particle.CLOUD);
 
@@ -950,14 +953,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			}	
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 3);
 	}
-	
+
 	// frost spell
 	void castFrostSpell(Player player) {
 		player.setFreezeTicks(100);
+		
+		World world = player.getWorld();
+		Particle.DustOptions snow = new Particle.DustOptions(Color.WHITE, 0.5f);
+
 		new BukkitRunnable(){
 			double t = 0;
 			double x, y, z = 0;
-			Particle.DustOptions snow = new Particle.DustOptions(Color.WHITE, 0.5f);
 			public void run() {
 				t +=  Math.PI / 8;
 				Location loc = player.getLocation();
@@ -966,7 +972,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					y = 0.2 * t;
 					z = 0.15 * (4 * Math.PI - t) * Math.sin(t + phi);
 					loc.add(x, y, z);
-					loc.getWorld().spawnParticle(particlemap.get(SpellType.FROST), loc, 10, 0.2, 0.0, 0.2, snow);
+					world.spawnParticle(particlemap.get(SpellType.FROST), loc, 10, 0.2, 0.0, 0.2, 0, snow, false);
 					loc.subtract(x,y,z);
  				}		
  				if (t >= Math.PI * 4) {
@@ -1102,6 +1108,9 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		}
 
 		player.sendTitle(ChatColor.GOLD + "Let's Dance!", ChatColor.LIGHT_PURPLE + "Put on your " + ChatColor.RED + "red" + ChatColor.LIGHT_PURPLE + " shoes and dance the " + ChatColor.AQUA + "blues!", 10, 60, 30);
+
+		World world = player.getWorld();
+		DustOptions frostparticle = new DustOptions(Color.AQUA, 1.0f);
 		
 		new BukkitRunnable() {
 
@@ -1109,13 +1118,12 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			long elapsedTime = 0L;
 
 			double x = 0; double z = 0;
-			Particle.DustOptions frostparticle = new Particle.DustOptions(Color.AQUA, 1.0f);
 
 			public void run() {
 
 				for (int i = 0; i < instances; i++) {
 
-		            entities[i].getLocation().getWorld().spawnParticle(particlemap.get(SpellType.FROST), entities[i].getLocation().add(0,0.5,0), 0, 0, 0, 0, frostparticle);
+	                world.spawnParticle(particlemap.get(SpellType.FROST), entities[i].getLocation().add(0,0.5,0), 1, 0, 0, 0, 0, frostparticle, false);
 		            
 					entitydegree[i]+=(instances*3);
 					if (entitydegree[i] >= 360) { entitydegree[i] = 0; }
