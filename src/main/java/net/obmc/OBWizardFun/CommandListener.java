@@ -164,7 +164,6 @@ public class CommandListener implements CommandExecutor {
 				sender.sendMessage(chatmsgprefix + ChatColor.RED + "Player " + ChatColor.WHITE + args[1] + ChatColor.RED + " is not online!");
 				return true;
 			}
-
    			OBWizardFun.getInstance().castSpell(OBWizardFun.getInstance().getSpell(args[0].toUpperCase()), false, true, (Player) sender, Bukkit.getPlayerExact(args[1]));
 		
 		}

@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.Color;
@@ -18,6 +20,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.Registry;
 import org.bukkit.Particle.DustOptions;
 import org.bukkit.Sound;
 import org.bukkit.World;
@@ -80,9 +83,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
         return clazz.getEnumConstants()[x];
     }
 	// sound randomizer 
-	private <T extends Enum<Sound>> T randomSound(Class<T> clazz){
-        int x = rand.nextInt(clazz.getEnumConstants().length);
-        return clazz.getEnumConstants()[x];
+	//private <T extends Enum<Sound>> T randomSound(Class<T> clazz){
+    //    int x = rand.nextInt(clazz.getEnumConstants().length);
+    //    return clazz.getEnumConstants()[x];
+    //}
+	private Sound randomSound() {
+        List<Sound> sounds = Registry.SOUNDS.stream().collect(Collectors.toList());
+        int x = rand.nextInt(sounds.size());
+        return sounds.get(x);
     }
 	
 	// entities allowed for dancing entity spell
@@ -803,7 +811,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// random sound effect
 	void playSoundEffect(Player player) {
-		Sound randomsound = randomSound(Sound.class);
+		//Sound randomsound = randomSound(Sound.class);
+		Sound randomsound = randomSound();
 		if ( randomsound.toString().startsWith("MUSIC_DISC")) {
 			player.sendMessage(ChatColor.AQUA + "Oh no! A wizard just put on his favioute track! Cover your ears!");
 		}
