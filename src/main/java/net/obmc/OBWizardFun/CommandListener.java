@@ -9,7 +9,6 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -18,20 +17,24 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 public class CommandListener implements CommandExecutor {
 
 	static Logger log = Logger.getLogger("Minecraft");
 	
-	private String chatmsgprefix = null;
-	private String logmsgprefix = null;
+	private Component chatMsgPrefix = null;
+	private String logMsgPrefix = null;
 	
 	public CommandListener() {
-		chatmsgprefix = OBWizardFun.getInstance().getChatMsgPrefix();
-		logmsgprefix = OBWizardFun.getInstance().getLogMsgPrefix();
+		chatMsgPrefix = OBWizardFun.getInstance().getChatMsgPrefix();
+		logMsgPrefix = OBWizardFun.getInstance().getLogMsgPrefix();
 	}
 	
-	private record MobList( String type, String name, Location loc ) {
-		public MobList( String type, String name, Location loc ) {
+	private record MobList( String type, Component name, Location loc ) {
+		public MobList( String type, Component name, Location loc ) {
 			this.type = type;
 			this.name = name;
 			this.loc = loc;
@@ -64,7 +67,7 @@ public class CommandListener implements CommandExecutor {
 				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
 				while (eit.hasNext()) {
 					Entity entity = eit.next();
-					MobList mob = new MobList( entity.getType().name(), entity.getCustomName(), entity.getLocation() );
+					MobList mob = new MobList( entity.getType().name(), entity.customName(), entity.getLocation() );
 					mobs.add( mob );
 				}
 				Map< String, List<MobList>> worldmobs = mobs.stream()
@@ -72,12 +75,13 @@ public class CommandListener implements CommandExecutor {
 				final String ft = filterType;
 				worldmobs.forEach( ( type, moblist ) -> {
 					moblist.forEach( mob -> {
+					    String mobName = PlainTextComponentSerializer.plainText().serialize(mob.name);
 						if ( !ft.isEmpty() ) {
 							if ( type.toUpperCase().equals( ft.toUpperCase() ) ) {
-								log.log(Level.INFO, "debug - " + type + ", " + mob.name + ", " + mob.loc.getX() + ", " + mob.loc.getY() + ", " + mob.loc.getZ() );
+								log.log(Level.INFO, "debug - " + type + ", " + mobName + ", " + mob.loc.getX() + ", " + mob.loc.getY() + ", " + mob.loc.getZ() );
 							}
 						} else {
-							log.log(Level.INFO, "debug - " + type + ", " + mob.name + ", " + mob.loc.getX() + ", " + mob.loc.getY() + ", " + mob.loc.getZ() );
+							log.log(Level.INFO, "debug - " + type + ", " + mobName + ", " + mob.loc.getX() + ", " + mob.loc.getY() + ", " + mob.loc.getZ() );
 						}
 					});
 				});
@@ -99,17 +103,15 @@ public class CommandListener implements CommandExecutor {
 			//TODO: remove when testing done
 			if (args[0].equals("killall")) {
 				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
-				int killed = 0;
 				while (eit.hasNext()) {
 					Entity entity = eit.next();
 					String entityname = null;
 					try {
-						entityname = entity.getCustomName();
+						entityname = PlainTextComponentSerializer.plainText().serialize(entity.customName());
 					} catch (NullPointerException e) {
 					}
 					if (entity.getType().equals(EntityType.valueOf(args[1].toUpperCase())) && entityname == null) {
 						entity.remove();
-						killed++;
 					}
 				}
 				return true;
@@ -118,13 +120,11 @@ public class CommandListener implements CommandExecutor {
 			//TODO: remove when testing done
 			if (args[0].equals("killnamed")) {
 				Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
-				int killed = 0;
 				while (eit.hasNext()) {
 					Entity entity = eit.next();
 					String entityname = "";
 					try {
-						entityname = entity.getCustomName();
-						entityname = ChatColor.stripColor(entityname);
+						entityname = PlainTextComponentSerializer.plainText().serialize(entity.customName());
 						String mobname = args[1];
 						for (int i = 2; i<args.length; i++) {
 							mobname = mobname + " " + args[i];
@@ -132,7 +132,6 @@ public class CommandListener implements CommandExecutor {
 						if (entityname.contains(mobname)) {
 							log.log(Level.INFO, "debug - killnamed - removing " + mobname + ", uuid: " +entity.getUniqueId().toString());
 							entity.remove();
-							killed++;
 						}
 					} catch (Exception e) {
 					}
@@ -145,12 +144,12 @@ public class CommandListener implements CommandExecutor {
 				return true;
 			}
 			if (!OBWizardFun.getInstance().isSpell(args[0].toUpperCase())) {
-				sender.sendMessage(chatmsgprefix + ChatColor.RED + "Invalid spell provided");
-				sender.sendMessage(chatmsgprefix + "Valid spells are:");
-				sender.sendMessage(chatmsgprefix + "    FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD,");
-				sender.sendMessage(chatmsgprefix + "    FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT,");
-				sender.sendMessage(chatmsgprefix + "    EVILWITCH, ANGRYBEES, RABIDWOLVES, WRATHWARDEN,");
-				sender.sendMessage(chatmsgprefix + "    BATTYBATS, DANCINGENTITY");
+				sender.sendMessage(chatMsgPrefix.append(Component.text("Invalid spell provided", NamedTextColor.RED)));
+				sender.sendMessage(chatMsgPrefix.append(Component.text("Valid spells are:")));
+				sender.sendMessage(chatMsgPrefix.append(Component.text("    FIRE, FIREWORK, EXPLOSION, LIGHTNING, SOAK, WEIRD,")));
+				sender.sendMessage(chatMsgPrefix.append(Component.text("    FROST, PEE, GEYSER, FIREBALL, SOUNDEFFECT,")));
+				sender.sendMessage(chatMsgPrefix.append(Component.text("    EVILWITCH, ANGRYBEES, RABIDWOLVES, WRATHWARDEN,")));
+				sender.sendMessage(chatMsgPrefix.append(Component.text("    BATTYBATS, DANCINGENTITY")));
 				return true;
 			}
 			boolean playeronline = false;
@@ -161,7 +160,10 @@ public class CommandListener implements CommandExecutor {
 				}
 			}
 			if (!playeronline) {
-				sender.sendMessage(chatmsgprefix + ChatColor.RED + "Player " + ChatColor.WHITE + args[1] + ChatColor.RED + " is not online!");
+			     sender.sendMessage(Component.text("Player ")
+			         .append(Component.text(args[1], NamedTextColor.WHITE))
+			         .append(Component.text(" is not online", NamedTextColor.RED))
+			     );
 				return true;
 			}
    			OBWizardFun.getInstance().castSpell(OBWizardFun.getInstance().getSpell(args[0].toUpperCase()), false, true, (Player) sender, Bukkit.getPlayerExact(args[1]));
@@ -171,6 +173,6 @@ public class CommandListener implements CommandExecutor {
 	}
 
     void Usage(CommandSender sender) {
-    	sender.sendMessage(chatmsgprefix + "/cast <spelltype> <player>" + ChatColor.GOLD + " - Cast a spell on a player");
+    	sender.sendMessage(chatMsgPrefix.append(Component.text("/cast <spelltype> <player>")).append(Component.text(" - Cast a spell on a player" , NamedTextColor.GOLD)));
     }
 }

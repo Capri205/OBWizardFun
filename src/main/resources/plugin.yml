@@ -1,10 +1,10 @@
-website: http://ob-mc.net
-name: OBWizardFun
-author: Fahrenheit451
-version: 1.0
-api-version: "1.21"
-main: net.obmc.OBWizardFun.OBWizardFun
-description: Pesky wizards casting random spells on players
+name: ${project.name}
+description: ${project.description}
+author: Fahrenheit451|Capri205
+website: ${project.url}
+version: ${project.version}
+api-version: ${api-version}
+main: net.obmc.${project.name}.${project.name}
 commands:
   cast:
     description: Cast a spell on a player.

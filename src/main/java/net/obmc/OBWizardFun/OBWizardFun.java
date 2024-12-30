@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -46,14 +47,15 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.kyori.adventure.title.Title;
 
+public class OBWizardFun extends JavaPlugin implements Listener {
 
-public class OBWizardFun extends JavaPlugin implements Listener
-{
-	
 	Logger log = Logger.getLogger("Minecraft");
 
 	public static OBWizardFun instance;
@@ -63,9 +65,14 @@ public class OBWizardFun extends JavaPlugin implements Listener
     }
     
 	private static String plugin = "OBWizardFun";
-	private static String pluginprefix = "[" + plugin + "]";
-	private static String chatmsgprefix = ChatColor.AQUA + "" + ChatColor.BOLD + plugin + ChatColor.DARK_GRAY + ChatColor.BOLD + " » " + ChatColor.LIGHT_PURPLE + "";
-	private static String logmsgprefix = pluginprefix + " » ";
+	private static String pluginPrefix = "[" + plugin + "]";
+	private static String logMsgPrefix = pluginPrefix + " » ";
+	private static TextComponent chatMsgPrefix = Component.text()
+	    .color(NamedTextColor.AQUA).decoration(TextDecoration.BOLD, true)
+	    .append(Component.text(plugin))
+	    .append(Component.text(" » ", NamedTextColor.DARK_GRAY, TextDecoration.BOLD))
+	    .append(Component.text("", NamedTextColor.LIGHT_PURPLE))
+	    .build();
 	
 	private EventListener listener;
 	
@@ -82,11 +89,8 @@ public class OBWizardFun extends JavaPlugin implements Listener
         int x = rand.nextInt(clazz.getEnumConstants().length);
         return clazz.getEnumConstants()[x];
     }
+
 	// sound randomizer 
-	//private <T extends Enum<Sound>> T randomSound(Class<T> clazz){
-    //    int x = rand.nextInt(clazz.getEnumConstants().length);
-    //    return clazz.getEnumConstants()[x];
-    //}
 	private Sound randomSound() {
         List<Sound> sounds = Registry.SOUNDS.stream().collect(Collectors.toList());
         int x = rand.nextInt(sounds.size());
@@ -116,89 +120,129 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	private ArrayList<Location> wardenspawns = new ArrayList<Location>();
 
 	// entity trackers
-	private HashMap<String, SpellEntity> evilwitchtracker = new HashMap<String, SpellEntity>();
-	private HashMap<String, SpellEntity> angrybeetracker = new HashMap<String, SpellEntity>();
-	private HashMap<String, SpellEntity> rabidwolftracker = new HashMap<String, SpellEntity>();
-	private HashMap<String, SpellEntity> wrathwardentracker = new HashMap<String, SpellEntity>();
-	private HashMap<String, SpellEntity> battybattracker = new HashMap<String, SpellEntity>();
+	private Map<String, SpellEntity> evilWitchTracker = new HashMap<String, SpellEntity>();
+	private Map<String, SpellEntity> angryBeeTracker = new HashMap<String, SpellEntity>();
+	private Map<String, SpellEntity> rabidWolfTracker = new HashMap<String, SpellEntity>();
+	private Map<String, SpellEntity> wrathWardenTracker = new HashMap<String, SpellEntity>();
+	private Map<String, SpellEntity> battyBatTracker = new HashMap<String, SpellEntity>();
 
 	// mappings of messages, sounds and particles to our spells
-	private HashMap<SpellType, HashMap<String, String>> messagemap = new HashMap<SpellType,HashMap<String,String>>();
-	private HashMap<SpellType, Sound> soundmap = new HashMap<SpellType, Sound>();
-	private HashMap<SpellType, Particle> particlemap = new HashMap<SpellType, Particle>();
+	private Map<SpellType, HashMap<String, Component>> messagemap = new HashMap<SpellType, HashMap<String, Component>>();
+	private Map<SpellType, Sound> soundmap = new HashMap<SpellType, Sound>();
+	private Map<SpellType, Particle> particlemap = new HashMap<SpellType, Particle>();
 	
 	private boolean doallplayers = false;
 	private boolean domessage = false;
 	private int taskid;
-	private int evilwitchchecker;
-	private int angrybeechecker;
-	private int rabidwolfchecker;
-	private int wrathwardenchecker;
-	private int battybatchecker;
-	private long startdelay = 20L;				// wait in seconds before starting spell casting
-	private long spellinterval = 60L;			// interval in seconds between random spells
-	private long evilwitchcheckinterval = 5L;		// interval in seconds between checks on evil witches
-	private long angrybeecheckinterval = 3L;		// interval in seconds between checks on angry bees
-	private long rabidwolfcheckinterval = 5L;		// interval in seconds between checks on angry bees
-	private long wrathwardencheckinterval = 5L;			// interval in seconds between checks on wardens
-	private long battybatcheckinterval = 2L;			// interval in seconds between checks on batty bats
-	private boolean spelltrackerchecking = false;
+	private int evilWitchChecker;
+	private int angryBeeChecker;
+	private int rabidWolfChecker;
+	private int wrathWardenChecker;
+	private int battyBatChecker;
+	private long startDelay = 20L;				// wait in seconds before starting spell casting
+	private long spellInterval = 60L;			// interval in seconds between random spells
+	private long evilWitchCheckInterval = 5L;		// interval in seconds between checks on evil witches
+	private long angryBeeCheckInterval = 3L;		// interval in seconds between checks on angry bees
+	private long rabidWolfCheckInterval = 5L;		// interval in seconds between checks on angry bees
+	private long wrathWardenCheckInterval = 5L;			// interval in seconds between checks on wardens
+	private long battyBatCheckInterval = 2L;			// interval in seconds between checks on batty bats
+	private boolean spellTrackerChecking = false;
 	
     public void onEnable() {
 
-    	log.log(Level.INFO, "[OBWizardFun] Plugin Version " + this.getDescription().getVersion() + " activated");
+    	log.log(Level.INFO, "[OBWizardFun] Plugin Version " + this.getPluginMeta().getVersion() + " activated");
 	
     	registerListeners();
     	
     	// setup messages
-    	messagemap.put(SpellType.FIRE, new HashMap<String,String>());
-    		messagemap.get(SpellType.FIRE).put("single", ChatColor.AQUA + "A wizard just set #PLAYER# on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
-    		messagemap.get(SpellType.FIRE).put("doall", ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
-        messagemap.put(SpellType.FIREWORK, new HashMap<String,String>());
-        	messagemap.get(SpellType.FIREWORK).put("single", ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
-        	messagemap.get(SpellType.FIREWORK).put("doall", ChatColor.AQUA + "A wizard just let fireworks under everyone!");
-  		messagemap.put(SpellType.EXPLOSION, new HashMap<String,String>());
-       		messagemap.get(SpellType.EXPLOSION).put("single", ChatColor.AQUA + "A wizard just cast an explosion spell on #PLAYER#!");
-       		messagemap.get(SpellType.EXPLOSION).put("doall", ChatColor.AQUA + "A wizard just blew everyone up!");
-    	messagemap.put(SpellType.LIGHTNING, new HashMap<String,String>());
-        	messagemap.get(SpellType.LIGHTNING).put("single", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on #PLAYER#!");
-        	messagemap.get(SpellType.LIGHTNING).put("doall", ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on everyone!");
-        messagemap.put(SpellType.SOAK, new HashMap<String,String>());
-        	messagemap.get(SpellType.SOAK).put("single", ChatColor.AQUA + "A wizard just soaked #PLAYER#!");
-        	messagemap.get(SpellType.SOAK).put("doall", ChatColor.AQUA + "A wizard just soaked everyone!");
-        messagemap.put(SpellType.WEIRD, new HashMap<String,String>());
-        	messagemap.get(SpellType.WEIRD).put("single", ChatColor.AQUA + "A wizard cast a very weird spell on #PLAYER#!");
-        	messagemap.get(SpellType.WEIRD).put("doall", ChatColor.AQUA + "A wizard cast a very weird spell on everyone!");
-        messagemap.put(SpellType.FROST, new HashMap<String,String>());
-        	messagemap.get(SpellType.FROST).put("single", ChatColor.AQUA + "A wizard cast some kind of frost spell on #PLAYER#!");
-        	messagemap.get(SpellType.FROST).put("doall", ChatColor.AQUA + "A wizard cast some kind of frost spell on everyone!");
-        messagemap.put(SpellType.PEE, new HashMap<String,String>());
-        	messagemap.get(SpellType.PEE).put("single", ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
-        	messagemap.get(SpellType.PEE).put("doall", ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
-        messagemap.put(SpellType.GEYSER, new HashMap<String,String>());
-        	messagemap.get(SpellType.GEYSER).put("single", ChatColor.AQUA + "A wizard cast a steam jet under " + "#PLAYER#! Run #PLAYER#, Run!");
-        	messagemap.get(SpellType.GEYSER).put("doall", ChatColor.AQUA + "A wizard caused steam jets to form under everyone! Run!");
-        messagemap.put(SpellType.FIREBALL, new HashMap<String,String>());
-        	messagemap.get(SpellType.FIREBALL).put("single", ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
-        	messagemap.get(SpellType.FIREBALL).put("doall", ChatColor.AQUA + "A wizard launched " + ChatColor.GOLD + "fireballs" + ChatColor.AQUA + " at everyone! Take cover!");        
-        messagemap.put(SpellType.EVILWITCH, new HashMap<String,String>());
-            messagemap.get(SpellType.EVILWITCH).put("single", ChatColor.AQUA + "A wizard sent an evil witch to destroy #PLAYER#!");
-            messagemap.get(SpellType.EVILWITCH).put("doall", ChatColor.AQUA + "Evil witches are out to get everyone!");
-        messagemap.put(SpellType.ANGRYBEES, new HashMap<String,String>());
-            messagemap.get(SpellType.ANGRYBEES).put("single", ChatColor.AQUA + "A wizard released a swarm of angry bees on #PLAYER#!");
-            messagemap.get(SpellType.ANGRYBEES).put("doall", ChatColor.AQUA + "Swarms of angry bees are on the loose! Run!");
-        messagemap.put(SpellType.RABIDWOLVES, new HashMap<String,String>());
-            messagemap.get(SpellType.RABIDWOLVES).put("single", ChatColor.AQUA + "A wizard released a pack of rabid wolves on #PLAYER#!");
-            messagemap.get(SpellType.RABIDWOLVES).put("doall", ChatColor.AQUA + "A pack of rabid wolves are on the loose! Run!");
-        messagemap.put(SpellType.WRATHWARDEN, new HashMap<String,String>());
-            messagemap.get(SpellType.WRATHWARDEN).put("single", ChatColor.AQUA + "A wizard spawned March of the Wardens on #PLAYER#!");
-            messagemap.get(SpellType.WRATHWARDEN).put("doall", ChatColor.AQUA + "March of the Wardens was invoked by a wizard! Get outta here!");
-        messagemap.put(SpellType.BATTYBATS, new HashMap<String,String>());
-            messagemap.get(SpellType.BATTYBATS).put("single", ChatColor.AQUA + "A wizard sent a cloud of batty bats to annoy #PLAYER#!");
-            messagemap.get(SpellType.BATTYBATS).put("doall", ChatColor.AQUA + "A cloud of Batty Bats was released by a wizard! Get your tennis racket!");
-        messagemap.put(SpellType.DANCINGENTITY, new HashMap<String,String>());
-            messagemap.get(SpellType.DANCINGENTITY).put("single", ChatColor.AQUA + "A wizard want's to party! What's that dancing around #PLAYER#?");
-            messagemap.get(SpellType.DANCINGENTITY).put("doall", ChatColor.AQUA + "Looks like it's party time! Let the dancing begin!");
+    	messagemap.put(SpellType.FIRE, new HashMap<String, Component>());
+    	messagemap.get(SpellType.FIRE).put("single", Component.text("A wizard just set #PLAYER# on ", NamedTextColor.AQUA)
+    	    .append(Component.text("fire", NamedTextColor.RED)).append(Component.text("!", NamedTextColor.AQUA)));
+    		        //ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
+    	messagemap.get(SpellType.FIRE).put("doall", Component.text("A wizard just set #PLAYER# on ", NamedTextColor.AQUA)
+            .append(Component.text("fire", NamedTextColor.RED)).append(Component.text("!", NamedTextColor.AQUA))); 
+    		        //ChatColor.AQUA + "A wizard just set everyone on " + ChatColor.RED + "fire" + ChatColor.AQUA + "!");
+        messagemap.put(SpellType.FIREWORK, new HashMap<String, Component>());
+        messagemap.get(SpellType.FIREWORK).put("single", Component.text("A wizard just lit a firework under #PLAYER#!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard just lit a firework under #PLAYER#!");
+        messagemap.get(SpellType.FIREWORK).put("doall", Component.text("A wizard just let fireworks under everyone!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard just let fireworks under everyone!");
+  		messagemap.put(SpellType.EXPLOSION, new HashMap<String, Component>());
+       	messagemap.get(SpellType.EXPLOSION).put("single", Component.text("A wizard just cast an explosion spell on #PLAYER#!", NamedTextColor.AQUA));
+       		        //ChatColor.AQUA + "A wizard just cast an explosion spell on #PLAYER#!");
+       	messagemap.get(SpellType.EXPLOSION).put("doall", Component.text("A wizard just blew everyone up!", NamedTextColor.AQUA));
+       		        //ChatColor.AQUA + "A wizard just blew everyone up!");
+    	messagemap.put(SpellType.LIGHTNING, new HashMap<String, Component>());
+        messagemap.get(SpellType.LIGHTNING).put("single", Component.text("A wizard just cast a ", NamedTextColor.AQUA)
+            .append(Component.text("lightning", NamedTextColor.WHITE)).append(Component.text(" spell on #PLAYER#!", NamedTextColor.AQUA)));
+        	        //ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on #PLAYER#!");
+        messagemap.get(SpellType.LIGHTNING).put("doall", Component.text("A wizard just cast a ", NamedTextColor.AQUA)
+            .append(Component.text("lightning", NamedTextColor.WHITE)).append(Component.text(" spell on everyone!", NamedTextColor.AQUA))); 
+        	        //ChatColor.AQUA + "A wizard just cast a " + ChatColor.WHITE + "lightning" + ChatColor.AQUA + " spell on everyone!");
+        messagemap.put(SpellType.SOAK, new HashMap<String, Component>());
+        messagemap.get(SpellType.SOAK).put("single", Component.text("A wizard just soaked #PLAYER#!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard just soaked #PLAYER#!");
+        messagemap.get(SpellType.SOAK).put("doall", Component.text("A wizard just soaked everyone!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard just soaked everyone!");
+        messagemap.put(SpellType.WEIRD, new HashMap<String, Component>());
+        messagemap.get(SpellType.WEIRD).put("single", Component.text("A wizard cast a very weird spell on #PLAYER#!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard cast a very weird spell on #PLAYER#!");
+        messagemap.get(SpellType.WEIRD).put("doall", Component.text("A wizard cast a very weird spell on everyone!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard cast a very weird spell on everyone!");
+        messagemap.put(SpellType.FROST, new HashMap<String, Component>());
+        messagemap.get(SpellType.FROST).put("single", Component.text("A wizard cast some kind of frost spell on #PLAYER#!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard cast some kind of frost spell on #PLAYER#!");
+        messagemap.get(SpellType.FROST).put("doall", Component.text("A wizard cast some kind of frost spell on everyone!", NamedTextColor.AQUA));
+        	        //ChatColor.AQUA + "A wizard cast some kind of frost spell on everyone!");
+        messagemap.put(SpellType.PEE, new HashMap<String, Component>());
+        messagemap.get(SpellType.PEE).put("single", Component.text("A wizard caused #PLAYER# to ", NamedTextColor.AQUA)
+                .append(Component.text("pee", NamedTextColor.YELLOW)).append(Component.text(" their pants!", NamedTextColor.AQUA)));
+                //ChatColor.AQUA + "A wizard caused #PLAYER# to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " their pants!");
+        messagemap.get(SpellType.PEE).put("doall", Component.text("A wizard caused everyone to ", NamedTextColor.AQUA)
+                .append(Component.text("pee", NamedTextColor.YELLOW)).append(Component.text(" themselves!", NamedTextColor.AQUA)));
+                //ChatColor.AQUA + "A wizard caused everyone to " + ChatColor.YELLOW + "pee" + ChatColor.AQUA + " themselves!");
+        messagemap.put(SpellType.GEYSER, new HashMap<String, Component>());
+        messagemap.get(SpellType.GEYSER).put("single", Component.text("A wizard cast a steam jet under #PLAYER#! Run #PLAYER#, Run!", NamedTextColor.AQUA));
+                //ChatColor.AQUA + "A wizard cast a steam jet under " + "#PLAYER#! Run #PLAYER#, Run!");
+        messagemap.get(SpellType.GEYSER).put("doall", Component.text("A wizard caused steam jets to form under everyone! Run!", NamedTextColor.AQUA));
+                //ChatColor.AQUA + "A wizard caused steam jets to form under everyone! Run!");
+        messagemap.put(SpellType.FIREBALL, new HashMap<String, Component>());
+        messagemap.get(SpellType.FIREBALL).put("single", Component.text("A wizard launched a ", NamedTextColor.AQUA)
+                .append(Component.text("fireball", NamedTextColor.GOLD)).append(Component.text(" at #PLAYER#!", NamedTextColor.AQUA)));
+                //ChatColor.AQUA + "A wizard launched a " + ChatColor.GOLD + "fireball" + ChatColor.AQUA + " at #PLAYER#!");
+        messagemap.get(SpellType.FIREBALL).put("doall", Component.text("A wizard launched ", NamedTextColor.AQUA)
+                .append(Component.text("fireballs", NamedTextColor.GOLD)).append(Component.text(" at everyone! Take cover!", NamedTextColor.AQUA)));
+                //ChatColor.AQUA + "A wizard launched " + ChatColor.GOLD + "fireballs" + ChatColor.AQUA + " at everyone! Take cover!");        
+        messagemap.put(SpellType.EVILWITCH, new HashMap<String, Component>());
+        messagemap.get(SpellType.EVILWITCH).put("single", Component.text("A wizard sent an evil witch to destroy #PLAYER#!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A wizard sent an evil witch to destroy #PLAYER#!");
+        messagemap.get(SpellType.EVILWITCH).put("doall", Component.text("Evil witches are out to get everyone!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "Evil witches are out to get everyone!");
+        messagemap.put(SpellType.ANGRYBEES, new HashMap<String, Component>());
+        messagemap.get(SpellType.ANGRYBEES).put("single", Component.text("A wizard released a swarm of angry bees on #PLAYER#!", NamedTextColor.AQUA)); 
+                    //ChatColor.AQUA + "A wizard released a swarm of angry bees on #PLAYER#!");
+        messagemap.get(SpellType.ANGRYBEES).put("doall", Component.text("Swarms of angry bees are on the loose! Run!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "Swarms of angry bees are on the loose! Run!");
+        messagemap.put(SpellType.RABIDWOLVES, new HashMap<String, Component>());
+        messagemap.get(SpellType.RABIDWOLVES).put("single", Component.text("A wizard released a pack of rabid wolves on #PLAYER#!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A wizard released a pack of rabid wolves on #PLAYER#!");
+        messagemap.get(SpellType.RABIDWOLVES).put("doall", Component.text("A pack of rabid wolves are on the loose! Run!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A pack of rabid wolves are on the loose! Run!");
+        messagemap.put(SpellType.WRATHWARDEN, new HashMap<String, Component>());
+        messagemap.get(SpellType.WRATHWARDEN).put("single", Component.text("A wizard spawned March of the Wardens on #PLAYER#!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A wizard spawned March of the Wardens on #PLAYER#!");
+        messagemap.get(SpellType.WRATHWARDEN).put("doall", Component.text("March of the Wardens was invoked by a wizard! Get outta here!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "March of the Wardens was invoked by a wizard! Get outta here!");
+        messagemap.put(SpellType.BATTYBATS, new HashMap<String, Component>());
+        messagemap.get(SpellType.BATTYBATS).put("single", Component.text("A wizard sent a cloud of batty bats to annoy #PLAYER#!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A wizard sent a cloud of batty bats to annoy #PLAYER#!");
+        messagemap.get(SpellType.BATTYBATS).put("doall", Component.text("A cloud of Batty Bats was released by a wizard! Get your tennis racket!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A cloud of Batty Bats was released by a wizard! Get your tennis racket!");
+        messagemap.put(SpellType.DANCINGENTITY, new HashMap<String, Component>());
+        messagemap.get(SpellType.DANCINGENTITY).put("single", Component.text("A wizard want's to party! What's that dancing around #PLAYER#?", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "A wizard want's to party! What's that dancing around #PLAYER#?");
+        messagemap.get(SpellType.DANCINGENTITY).put("doall", Component.text("Looks like it's party time! Let the dancing begin!", NamedTextColor.AQUA));
+                    //ChatColor.AQUA + "Looks like it's party time! Let the dancing begin!");
         
         // setup sounds - some effects have their own sound
         soundmap.put(SpellType.FIRE, Sound.BLOCK_BLASTFURNACE_FIRE_CRACKLE);
@@ -231,40 +275,40 @@ public class OBWizardFun extends JavaPlugin implements Listener
         BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
         
         // entity based spell checkers - clears entities that have despawned, need despawning or need retargetting
-        evilwitchchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        evilWitchChecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(evilwitchtracker, EntityType.WITCH, "Evil Witch");
+        		spellEntityChecker(evilWitchTracker, EntityType.WITCH, "Evil Witch");
         	}
-        }, startdelay*22, evilwitchcheckinterval*20);
+        }, startDelay*22, evilWitchCheckInterval*20);
         
-        angrybeechecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        angryBeeChecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(angrybeetracker, EntityType.BEE, "Angry Bee");
+        		spellEntityChecker(angryBeeTracker, EntityType.BEE, "Angry Bee");
         	}
-        }, startdelay*20, angrybeecheckinterval*20);
+        }, startDelay*20, angryBeeCheckInterval*20);
 
-        rabidwolfchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        rabidWolfChecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(rabidwolftracker, EntityType.WOLF, "Rabid Wolf");
+        		spellEntityChecker(rabidWolfTracker, EntityType.WOLF, "Rabid Wolf");
         	}
-        }, startdelay*20, rabidwolfcheckinterval*20);
+        }, startDelay*20, rabidWolfCheckInterval*20);
 
-        wrathwardenchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        wrathWardenChecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(wrathwardentracker, EntityType.WARDEN, "Wizards Warden");
+        		spellEntityChecker(wrathWardenTracker, EntityType.WARDEN, "Wizards Warden");
         	}
-        }, startdelay*20, wrathwardencheckinterval*20);
+        }, startDelay*20, wrathWardenCheckInterval*20);
 
-        battybatchecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+        battyBatChecker = scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
         	@Override
         	public void run() {
-        		spellEntityChecker(battybattracker, EntityType.BAT, "Batty Bat");
+        		spellEntityChecker(battyBatTracker, EntityType.BAT, "Batty Bat");
         	}
-        }, startdelay*20, battybatcheckinterval*20);
+        }, startDelay*20, battyBatCheckInterval*20);
     
         
         // enable the main task
@@ -288,7 +332,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
             		castSpell(spell, doallplayers, domessage, null, null);
             	}
             } 
-        }, startdelay*20, spellinterval*20);
+        }, startDelay*20, spellInterval*20);
     }
 
     // register any listeners
@@ -301,45 +345,45 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	
 	@Override
 	public void onDisable() {
-		Bukkit.getScheduler().cancelTask(evilwitchchecker);
-		Bukkit.getScheduler().cancelTask(angrybeechecker);
-		Bukkit.getScheduler().cancelTask(rabidwolfchecker);
-		Bukkit.getScheduler().cancelTask(wrathwardenchecker);
-		Bukkit.getScheduler().cancelTask(battybatchecker);
+		Bukkit.getScheduler().cancelTask(evilWitchChecker);
+		Bukkit.getScheduler().cancelTask(angryBeeChecker);
+		Bukkit.getScheduler().cancelTask(rabidWolfChecker);
+		Bukkit.getScheduler().cancelTask(wrathWardenChecker);
+		Bukkit.getScheduler().cancelTask(battyBatChecker);
 		Bukkit.getScheduler().cancelTask(taskid);
 		
 		// remove any tracker entities and world entities that might be left over
-		log.log(Level.INFO, logmsgprefix + "Unloading Evil Witches");
-		RemoveWorldEntities(evilwitchtracker, EntityType.WITCH, "Evil Witch");
-		log.log(Level.INFO, logmsgprefix + "Unloading Angry Bees");
-		RemoveWorldEntities(evilwitchtracker, EntityType.BEE, "Angry Bee");
-		log.log(Level.INFO, logmsgprefix + "Unloading Rabid Wolves");
-		RemoveWorldEntities(evilwitchtracker, EntityType.WOLF, "Rabid Wolf");
-		log.log(Level.INFO, logmsgprefix + "Unloading Wizards Wardens");
-		RemoveWorldEntities(evilwitchtracker, EntityType.WARDEN, "Wizards Warden");
-		log.log(Level.INFO, logmsgprefix + "Unloading Batty Bats");
-		RemoveWorldEntities(evilwitchtracker, EntityType.BAT, "Batty Bat");
+		log.log(Level.INFO, logMsgPrefix + "Unloading Evil Witches");
+		RemoveWorldEntities(evilWitchTracker, EntityType.WITCH, "Evil Witch");
+		log.log(Level.INFO, logMsgPrefix + "Unloading Angry Bees");
+		RemoveWorldEntities(angryBeeTracker, EntityType.BEE, "Angry Bee");
+		log.log(Level.INFO, logMsgPrefix + "Unloading Rabid Wolves");
+		RemoveWorldEntities(rabidWolfTracker, EntityType.WOLF, "Rabid Wolf");
+		log.log(Level.INFO, logMsgPrefix + "Unloading Wizards Wardens");
+		RemoveWorldEntities(wrathWardenTracker, EntityType.WARDEN, "Wizards Warden");
+		log.log(Level.INFO, logMsgPrefix + "Unloading Batty Bats");
+		RemoveWorldEntities(battyBatTracker, EntityType.BAT, "Batty Bat");
 		
-		log.log(Level.INFO, logmsgprefix + "Plugin unloaded");
+		log.log(Level.INFO, logMsgPrefix + "Plugin unloaded");
 	}
 
 
 	// remove any entities from world that might be left over
-	private void RemoveWorldEntities(HashMap<String, SpellEntity> spelltracker, EntityType type, String mobname) {
+	private void RemoveWorldEntities(Map<String, SpellEntity> spellTracker, EntityType type, String mobName) {
 		Iterator<Entity> weit = Bukkit.getWorld("world").getEntities().iterator();
 		int mobcount = 0;
 		while (weit.hasNext()) {
 			Entity entity = weit.next();
-			if (entity.getCustomName() != null) {
-				String entityname = ChatColor.stripColor(entity.getCustomName());
-				if (entity.getType().equals(type) && entityname.contains(mobname)) {
+			if (entity.customName() != null) {
+				String entityname = PlainTextComponentSerializer.plainText().serialize(entity.customName());
+				if (entity.getType().equals(type) && entityname.contains(mobName)) {
 					entity.remove();
 					mobcount++;
 				}
 			}
 		}
-		log.log(Level.INFO, logmsgprefix + "Removed " + mobcount + " entities from world");
-		spelltracker.clear();
+		log.log(Level.INFO, logMsgPrefix + "Removed " + mobcount + " entities from world");
+		spellTracker.clear();
 	}
 
 	// return this instance
@@ -351,13 +395,13 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		return plugin;
 	}
 	public static String getPluginPrefix() {
-		return pluginprefix;
+		return pluginPrefix;
 	}
-	public String getChatMsgPrefix() {
-		return chatmsgprefix;
+	public Component getChatMsgPrefix() {
+		return chatMsgPrefix;
 	}
 	public String getLogMsgPrefix() {
-		return logmsgprefix;
+		return logMsgPrefix;
 	}
 
 	// check a spell is valid
@@ -378,35 +422,36 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// checker for entity based spells - cross check world entities against tracker and
 	// tracker entries against world entities, and re-target entities if necessary
-	void spellEntityChecker(HashMap<String, SpellEntity> spelltracker, EntityType type, String mobname) {
-		if (spelltracker.size() > 0) {
-			spelltrackerchecking = true;
+	void spellEntityChecker(Map<String, SpellEntity> spellTracker, EntityType type, String mobName) {
+		if (spellTracker.size() > 0) {
+			spellTrackerChecking = true;
 			Iterator<Entity> eit = Bukkit.getWorld("world").getEntities().iterator();
 			while (eit.hasNext()) {
 				Entity entity = eit.next();
-				String entityname = "";
-				if ( entity.getCustomName() != null) {
-					entityname = ChatColor.stripColor(entity.getCustomName());
+				String entityName = "";
+				if ( entity.customName() != null) {
+					//entityName = ChatColor.stripColor(entity.getCustomName());
+					entityName = PlainTextComponentSerializer.plainText().serialize(entity.customName());
 				}
-				if (entity.getType().equals(type) && entityname.contains(mobname)) {
+				if (entity.getType().equals(type) && entityName.contains(mobName)) {
 					String entityuuid = entity.getUniqueId().toString();
-					SpellEntity spellentity = null;
-					spellentity = spelltracker.get(entityuuid);
-					if (spellentity != null) {
-						Player target = Bukkit.getPlayer(UUID.fromString(spellentity.getTargetUUID()));
+					SpellEntity spellEntity = null;
+					spellEntity = spellTracker.get(entityuuid);
+					if (spellEntity != null) {
+						Player target = Bukkit.getPlayer(UUID.fromString(spellEntity.getTargetUUID()));
 						if (target == null || target.isDead() || target.isInWater() ||
 								//target.getGameMode().equals(GameMode.CREATIVE) || target.getGameMode().equals(GameMode.SPECTATOR) ||
 								target.getLocation().getY() > 200) {
 							// player no longer in world so despawn entities
 							entity.playEffect(EntityEffect.ENTITY_POOF);
 							entity.remove();
-							spelltracker.remove(entityuuid);
+							spellTracker.remove(entityuuid);
 						} else {
-							if (entity.getTicksLived() > spellentity.getLifespan()) {
+							if (entity.getTicksLived() > spellEntity.getLifespan()) {
 								// entity reached end of live so despawn
 								entity.playEffect(EntityEffect.ENTITY_POOF);
 								entity.remove();								
-								spelltracker.remove(entityuuid);
+								spellTracker.remove(entityuuid);
 							} else {
 								
 								// move mob to target player if player has moved away
@@ -522,7 +567,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 					worldentities.add(entity.getUniqueId().toString());
 				}
 			}
-			Iterator<String> stit = spelltracker.keySet().iterator();
+			Iterator<String> stit = spellTracker.keySet().iterator();
 			while(stit.hasNext()) {
 				String trackeruuid = stit.next();
 				if (!worldentities.contains(trackeruuid)) {
@@ -532,7 +577,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			}
 
 			// check tracker vs world entities
-			spelltrackerchecking = false;
+			spellTrackerChecking = false;
 		}
 	}
 	
@@ -607,13 +652,13 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	}
 	
 	// cast a random spell
-	void castSpell(SpellType spelltype, boolean doallplayers, boolean domessage, Player caster, Player specificplayer) {
+	void castSpell(SpellType spellType, boolean doAllPlayers, boolean doMessage, Player caster, Player specificPlayer) {
 
 		// get all online players into a list
 		boolean docaster = false;
 		ArrayList<Player> eligibleplayers = new ArrayList<Player>();
-		if (specificplayer != null && caster != null) {
-			eligibleplayers.add(specificplayer);
+		if (specificPlayer != null && caster != null) {
+			eligibleplayers.add(specificPlayer);
 			docaster = true;
 			doallplayers = false;
 		} else {
@@ -626,7 +671,12 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			Player player = pit.next();
 			if (player.isDead() || player.isInWater() || player.isFlying() || player.isSwimming() || player.getGameMode().equals(GameMode.CREATIVE) || player.getGameMode().equals(GameMode.SPECTATOR) || player.getLocation().getY() > 200) {
 				if (docaster) {
-					caster.sendMessage(chatmsgprefix + ChatColor.RED + "Cannot cast a spell on " + ChatColor.WHITE + player.getName() + ChatColor.RED + " right now");
+				    Component castMsg = chatMsgPrefix
+				        .append(Component.text("Cannot cast a spell on ", NamedTextColor.RED))
+				        .append(Component.text(player.getName(), NamedTextColor.WHITE))
+				        .append(Component.text(" right now", NamedTextColor.RED));
+					//caster.sendMessage(chatmsgprefix + ChatColor.RED + "Cannot cast a spell on " + ChatColor.WHITE + player.getName() + ChatColor.RED + " right now");
+				    caster.sendMessage(castMsg);
 				}
 				pit.remove();
 			}
@@ -645,10 +695,17 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		eligibleplayers.clear();
 
 		// output message
-		if (domessage && !spelltype.equals(SpellType.SOUNDEFFECT)) {
-			String message = doallplayers ? messagemap.get(spelltype).get("doall") : messagemap.get(spelltype).get("single").replace("#PLAYER#", finallist.get(0).getName());
+		if (domessage && !spellType.equals(SpellType.SOUNDEFFECT)) {
+			Component message = doallplayers ?
+			    messagemap.get(spellType).get("doall") :
+			    messagemap.get(spellType).get("single"); //.replace("#PLAYER#", finallist.get(0).getName());
+
+			if (!doAllPlayers) {
+			    message = replacePlaceholders(message, "#PLAYER#", finallist.get(0).getName());
+			}
+			
 			if (docaster) {
-				message = message.replace("A wizard", caster.getName());
+				message = replacePlaceholders(message, "A wizard", caster.getName());
 			}
 			for (Player messageplayer : Bukkit.getOnlinePlayers()) {
 				messageplayer.sendMessage(message);
@@ -659,12 +716,12 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		for (Player player : finallist) {
 			
 			// spell sound
-			if (soundmap.containsKey(spelltype)) {
-				player.playSound(player.getLocation(), soundmap.get(spelltype), 1.0f, 1.0f);
+			if (soundmap.containsKey(spellType)) {
+				player.playSound(player.getLocation(), soundmap.get(spellType), 1.0f, 1.0f);
 			}
 
 			// play spell
-    		switch(spelltype) {
+    		switch(spellType) {
     		case FIRE:
     			castFireSpell(player);
     			break;
@@ -722,19 +779,20 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// batty bats spell
 	void spawnBattyBats(Player player) {
-		if (battybattracker.size() < 25 && !spelltrackerchecking) {
+		if (battyBatTracker.size() < 25 && !spellTrackerChecking) {
 			int swarmsize = (int) (Math.random() * (35-20+1)+20);
 			for (int i = 0; i < swarmsize; i++) {
 				Location batspawn = getRandomAirLocation(player.getLocation(), 2, 2, false);
 				LivingEntity battybatbase = (LivingEntity) player.getWorld().spawnEntity(batspawn, EntityType.BAT);
 				Bat battybat = (Bat) battybatbase;
-				battybat.setCustomName(ChatColor.RED + "Batty" + " " + ChatColor.GOLD + "Bat");
+				Component batName = Component.text("Batty ", NamedTextColor.RED).append(Component.text("Bat", NamedTextColor.GOLD));
+				battybat.customName(batName);
 				battybat.setTarget(player);
 				if (!battybat.isGlowing()) {
 					battybat.setGlowing(true);
 				}
-				battybattracker.put(battybat.getUniqueId().toString(),
-					new SpellEntity(battybat.getCustomName(),
+				battyBatTracker.put(battybat.getUniqueId().toString(),
+					new SpellEntity(batName,
 							battybat.getUniqueId().toString(),
 							player.getUniqueId().toString(),
 					(int) (Math.random() * (30 - 15 + 1 ) + 15)*20)
@@ -746,17 +804,18 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// wrath of the wardens spell
 	void spawnWrathWarden(Player player) {
-		if ( wrathwardentracker.size() == 0 && !spelltrackerchecking && player.getLocation().distance(Bukkit.getWorld("world").getSpawnLocation()) < 100) {
+		if ( wrathWardenTracker.size() == 0 && !spellTrackerChecking && player.getLocation().distance(Bukkit.getWorld("world").getSpawnLocation()) < 100) {
 			for (int i = 0; i < 4; i++) {
 				Location wardenspawn = wardenspawns.get(i);
 				LivingEntity wrathwardenbase = (LivingEntity) player.getWorld().spawnEntity(wardenspawn, EntityType.WARDEN);
 				Warden wrathwarden = (Warden) wrathwardenbase;
-				wrathwarden.setCustomName(ChatColor.AQUA +"" + ChatColor.BOLD + "Wizards Warden");
+				Component wardenName = Component.text("Wizards Warden", NamedTextColor.AQUA).decorate(TextDecoration.BOLD);
+				wrathwarden.customName(wardenName);
 				wrathwarden.setTarget(player);
 				wrathwarden.setRemoveWhenFarAway(false);
 				wrathwarden.setAnger(player, 80);
-				wrathwardentracker.put(wrathwarden.getUniqueId().toString(),
-					new SpellEntity(wrathwarden.getCustomName(),
+				wrathWardenTracker.put(wrathwarden.getUniqueId().toString(),
+					new SpellEntity(wardenName,
 							wrathwarden.getUniqueId().toString(),
 							player.getUniqueId().toString(),
 							(int) 45 * 20
@@ -768,17 +827,19 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// pack of rabid wolves
 	void spawnRabidWolves(Player player) {
-		if (rabidwolftracker.size() < 15 && !spelltrackerchecking) {
+		if (rabidWolfTracker.size() < 15 && !spellTrackerChecking) {
 			int packsize = (int) (Math.random() * ((5-3)+1)+3);
 			for (int i = 0; i < packsize; i++) {
 				Location wolfspawn = getRandomLocation(player.getLocation(), 3, 8);
 				LivingEntity rabidwolfbase = (LivingEntity) player.getWorld().spawnEntity(wolfspawn, EntityType.WOLF);
 				Wolf rabidwolf = (Wolf) rabidwolfbase;
-				rabidwolf.setCustomName(ChatColor.DARK_RED + "" + ChatColor.BOLD + "Rabid" + ChatColor.RESET + " " + ChatColor.WHITE + "Wolf");
+				Component wolfName = Component.text("Rabid ", NamedTextColor.RED).decorate(TextDecoration.BOLD)
+	               .append(Component.text("Wolf", NamedTextColor.WHITE));
+				rabidwolf.customName(wolfName);
 				rabidwolf.setTarget(player);
 				rabidwolf.attack(player);
-				rabidwolftracker.put(rabidwolf.getUniqueId().toString(),
-					new SpellEntity(rabidwolf.getCustomName(),
+				rabidWolfTracker.put(rabidwolf.getUniqueId().toString(),
+					new SpellEntity(wolfName,
 							rabidwolf.getUniqueId().toString(),
 							player.getUniqueId().toString(),
 					(int) (Math.random() * (30 - 15 + 1 ) + 15)*20)
@@ -789,18 +850,19 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// swarm of angry bees
 	void spawnAngryBees(Player player) {
-		if (angrybeetracker.size() < 15 && !spelltrackerchecking) {
+		if (angryBeeTracker.size() < 15 && !spellTrackerChecking) {
 			int swarmsize = (int) (Math.random() * (10-5+1)+5);
 			for (int i = 0; i < swarmsize; i++) {
 				Location beespawn = getRandomLocation(player.getLocation(), 2, 5);
 				LivingEntity angrybeebase = (LivingEntity) player.getWorld().spawnEntity(beespawn, EntityType.BEE);
 				Bee angrybee = (Bee) angrybeebase;
-				angrybee.setCustomName(ChatColor.RED + "Angry" + " " + ChatColor.GOLD + "Bee");
+				Component beeName = Component.text("Angry ", NamedTextColor.RED).append(Component.text("Bee", NamedTextColor.GOLD));
+				angrybee.customName(beeName);
 				angrybee.setAnger(500);
 				angrybee.setTarget(player);
 				angrybee.attack(player);
-				angrybeetracker.put(angrybee.getUniqueId().toString(),
-					new SpellEntity(angrybee.getCustomName(),
+				angryBeeTracker.put(angrybee.getUniqueId().toString(),
+					new SpellEntity(beeName,
 							angrybee.getUniqueId().toString(),
 							player.getUniqueId().toString(),
 					(int) (Math.random() * (30 - 15 + 1 ) + 15)*20)
@@ -811,32 +873,32 @@ public class OBWizardFun extends JavaPlugin implements Listener
 
 	// random sound effect
 	void playSoundEffect(Player player) {
-		//Sound randomsound = randomSound(Sound.class);
 		Sound randomsound = randomSound();
 		if ( randomsound.toString().startsWith("MUSIC_DISC")) {
-			player.sendMessage(ChatColor.AQUA + "Oh no! A wizard just put on his favioute track! Cover your ears!");
+			player.sendMessage(Component.text("Oh no! A wizard just put on his favioute track! Cover your ears!", NamedTextColor.AQUA));
 		}
 		player.playSound(player.getLocation(), randomsound, 1.0f, 1.0f);
 	}
 	
 	// spawn evil witch if not maxed out
 	void spawnEvilWitch(Player player) {
-		if (evilwitchtracker.size() < 3 && !spelltrackerchecking) {
+		if (evilWitchTracker.size() < 3 && !spellTrackerChecking) {
 			Location loc = getRandomLocation(player.getLocation(), 5, 10);
-			Witch evilwitch = (Witch) player.getWorld().spawnEntity(loc, EntityType.WITCH);
-			evilwitch.setCustomName("Evil Witch " + randomWitchName(WitchName.class));
-			evilwitch.setCustomNameVisible(true);
-			evilwitch.setTarget(player);
+			Witch evilWitch = (Witch) player.getWorld().spawnEntity(loc, EntityType.WITCH);
+			Component witchName = Component.text("Evil Witch " + randomWitchName(WitchName.class), NamedTextColor.WHITE);
+			evilWitch.customName(witchName);
+			evilWitch.setCustomNameVisible(true);
+			evilWitch.setTarget(player);
 			Double onfire = rand.nextDouble();
 			if (onfire < 0.1) {
-				evilwitch.setVisualFire(true);
-				evilwitch.setCustomName(ChatColor.RED + "Flaming " + ChatColor.WHITE + evilwitch.getCustomName());
+			    evilWitch.setVisualFire(true);
+			    evilWitch.customName(Component.text("Flaming ", NamedTextColor.RED).append(witchName));
 			} else {
-				evilwitch.setVisualFire(false);
+			    evilWitch.setVisualFire(false);
 			}
-			evilwitchtracker.put(evilwitch.getUniqueId().toString(),
-				new SpellEntity(evilwitch.getCustomName(),
-					evilwitch.getUniqueId().toString(),
+			evilWitchTracker.put(evilWitch.getUniqueId().toString(),
+				new SpellEntity(evilWitch.customName(),
+				        evilWitch.getUniqueId().toString(),
 					player.getUniqueId().toString(),
 					(int) (Math.random() * (60 - 30 + 1 ) + 30)*20)
 			);
@@ -851,7 +913,6 @@ public class OBWizardFun extends JavaPlugin implements Listener
 	// firework spell
 	void castFireworkSpell(Player player) {
 		Location loc = player.getLocation();
-		//final Firework f = (Firework)loc.getWorld().spawn(loc, (Class)Firework.class);
 		final Firework f = (Firework)loc.getWorld().spawnEntity(loc, EntityType.FIREWORK_ROCKET);
 		final FireworkMeta fm = f.getFireworkMeta();
  		fm.addEffect(buildFirework());
@@ -1041,48 +1102,7 @@ public class OBWizardFun extends JavaPlugin implements Listener
 			}
 		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 1);
 	}
-/*
-	private void castDancingEntitySpell(Player player, EntityType entitytype, double radius) {
-		float effectlife = 10000f;
-		double radialspeed = 2.0 * Math.PI / 0.5;
 
-		Location loc = player.getLocation().clone();
-		LivingEntity allay = (LivingEntity) player.getWorld().spawnEntity(loc, entitytype);
-		allay.setCustomName(ChatColor.RED + "Dancing" + " " + ChatColor.GOLD + entitytype.name());
-		
-		new BukkitRunnable() {
-
-			long startTime = System.currentTimeMillis();
-			long elapsedTime = 0L;
-
-			double x = 0; double z = 1; double degrees = 0;
-
-			Particle.DustOptions frostparticle = new Particle.DustOptions(Color.AQUA, 1.0f);
-
-			public void run() {
-
-				double angle = (radialspeed * degrees / 20);
-				x = radius * Math.cos(angle);
-                z = radius * Math.sin(angle);
-				
-				Location loc = Bukkit.getPlayer(player.getUniqueId()).getLocation();
-                loc.add(x, 2, z);
-                
-                allay.teleport(loc);
-                loc.getWorld().spawnParticle(particlemap.get(SpellType.FROST), loc, 0, 0, 0, 0, frostparticle);
-
-                degrees++;
-				if (degrees >= 360) { degrees = 0; }
-
-				elapsedTime = (new Date()).getTime() - startTime;
-				if (elapsedTime > effectlife) {
-					allay.remove();
-					this.cancel();
-				}
-			}
-		}.runTaskTimer(Bukkit.getPluginManager().getPlugin("OBWizardFun"), 0, 2);
-	}
-*/
 	private double convertMcAngle(double mcdegrees) {
 
 		int d = (int) mcdegrees;
@@ -1113,11 +1133,25 @@ public class OBWizardFun extends JavaPlugin implements Listener
             loc.add(x, 2, z);
 
             entities[i] = (LivingEntity) player.getWorld().spawnEntity(loc, entitytype);
-            entities[i].setCustomName(ChatColor.RED + "Dancing" + " " + ChatColor.GOLD + entitytype.name());
+            //entities[i].setCustomName(ChatColor.RED + "Dancing" + " " + ChatColor.GOLD + entitytype.name());
+            Component entityName = Component.text("Dancing ", NamedTextColor.RED).append(Component.text(entitytype.name(), NamedTextColor.GOLD));
+            entities[i].customName(entityName);
 		}
 
-		player.sendTitle(ChatColor.GOLD + "Let's Dance!", ChatColor.LIGHT_PURPLE + "Put on your " + ChatColor.RED + "red" + ChatColor.LIGHT_PURPLE + " shoes and dance the " + ChatColor.AQUA + "blues!", 10, 60, 30);
-
+		Component title = Component.text("Let's Dance!", NamedTextColor.GOLD).decoration(TextDecoration.BOLD, true);
+		Component subtitle = Component.text()
+		    .append(Component.text("Put on your ", NamedTextColor.LIGHT_PURPLE))
+		    .append(Component.text("red", NamedTextColor.RED))
+		    .append(Component.text(" shoes and dance the ", NamedTextColor.LIGHT_PURPLE))
+		    .append(Component.text("blues!", NamedTextColor.AQUA))
+		    .build();
+		Title adventureTitle = Title.title(title, subtitle, Title.Times.times(
+		    net.kyori.adventure.util.Ticks.duration(10),
+		    net.kyori.adventure.util.Ticks.duration(60),
+		    net.kyori.adventure.util.Ticks.duration(30)
+		));
+		player.showTitle(adventureTitle);
+		
 		World world = player.getWorld();
 		DustOptions frostparticle = new DustOptions(Color.AQUA, 1.0f);
 		
@@ -1205,4 +1239,22 @@ public class OBWizardFun extends JavaPlugin implements Listener
 		fireball.setIsIncendiary(rand.nextDouble() < 0.5 ? true : false);
 		fireball.setGravity(false);
 	}
+	
+	 // Method to replace placeholders recursively in a component
+	private Component replacePlaceholders(Component component, String placeholder, String replacement) {
+	    if (component instanceof TextComponent) {
+	        TextComponent textComponent = (TextComponent) component;
+	        String content = textComponent.content().replace(placeholder, replacement);
+	        return textComponent.content(content)
+	            .color(textComponent.color())
+	            .decorations(textComponent.decorations())
+	            .children(textComponent.children().stream()
+	                .map(child -> replacePlaceholders(child, placeholder, replacement))
+	                .toList());
+	    } else {
+	        return component.children(component.children().stream()
+	            .map(child -> replacePlaceholders(child, placeholder, replacement))
+	            .toList());
+	    }
+	} 
 }
